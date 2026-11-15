@@ -29,9 +29,9 @@ MIT License.
 
 ## Developed with Mindaeon
 
-This project was developed with **Mindaeon**, an AI-assisted software engineering environment. Mindaeon
-supported the architecture, implementation, and iterative refinement of the platform. The resulting
-codebase is maintained as a standalone, production-oriented application.
+This project was developed with **[Mindaeon](https://mindaeon.ai)**, an AI-assisted software engineering
+environment. Mindaeon supported the architecture, implementation, and iterative refinement of the
+platform. The resulting codebase is maintained as a standalone, production-oriented application.
 
 ## Stack
 
@@ -128,5 +128,6 @@ satabilirsiniz. Koşullar için [LICENSE](LICENSE) dosyasına bakınız.
 Kurumlar bu platformu ek lisans ücreti ödemeden ticari ürün ve hizmetlerine entegre edebilir,
 özelleştirebilir ve dağıtabilir.
 
-Bu proje **Mindaeon** ile geliştirilmiştir. Mindaeon; mimari, uygulama ve iteratif iyileştirme
-süreçlerinde kullanılmıştır. Kod tabanı, bağımsız ve üretim odaklı bir uygulama olarak sürdürülmektedir.
+Bu proje **[Mindaeon](https://mindaeon.ai)** ile geliştirilmiştir. Mindaeon; mimari, uygulama ve iteratif
+iyileştirme süreçlerinde kullanılmıştır. Kod tabanı, bağımsız ve üretim odaklı bir uygulama olarak
+sürdürülmektedir.
