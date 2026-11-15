@@ -6,7 +6,6 @@ using MindAeonDermaAI.Web.Models;
 
 namespace MindAeonDermaAI.Web.Controllers;
 
-[AllowAnonymous]
 public class AccountController : Controller
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
@@ -18,14 +17,14 @@ public class AccountController : Controller
         _userManager = userManager;
     }
 
-    [HttpGet]
+    [HttpGet, AllowAnonymous]
     public IActionResult Login(string? returnUrl = null)
     {
         if (_signInManager.IsSignedIn(User)) return RedirectToLocal(returnUrl);
         return View(new LoginViewModel { ReturnUrl = returnUrl });
     }
 
-    [HttpPost, ValidateAntiForgeryToken]
+    [HttpPost, AllowAnonymous, ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginViewModel model)
     {
         if (!ModelState.IsValid) return View(model);
@@ -45,7 +44,7 @@ public class AccountController : Controller
         return RedirectToAction(nameof(Login));
     }
 
-    [HttpGet]
+    [HttpGet, AllowAnonymous]
     public IActionResult AccessDenied() => View();
 
     private IActionResult RedirectToLocal(string? returnUrl) =>
