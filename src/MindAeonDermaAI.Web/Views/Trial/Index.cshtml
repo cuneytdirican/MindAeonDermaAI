@@ -1,0 +1,114 @@
+@using MindAeonDermaAI.Web.Controllers
+@using System.Text.Json
+@model TrialVm
+@{
+    ViewData["Title"] = "Clinical Trial Mode";
+
+    // Chart series: baseline vs follow-up mean per arm (nulls → 0 for display).
+    var armLabels = Model.Arms.Select(a => a.Arm).ToList();
+    var baselineData = Model.Arms.Select(a => a.MeanBaseline ?? 0).ToList();
+    var followData = Model.Arms.Select(a => a.MeanFollowUp ?? 0).ToList();
+    var hasData = Model.Arms.Any(a => a.MeanBaseline.HasValue || a.MeanFollowUp.HasValue);
+}
+
+<div class="page-head">
+    <div>
+        <h1 style="margin-bottom:2px">Clinical Trial Mode</h1>
+        <div class="muted">Each intervention category is a trial arm · Research use — non-diagnostic</div>
+    </div>
+</div>
+
+<div class="alert alert-info">
+    <strong>Research-use trial view.</strong> Arms group assessments by intervention category. Means are integrated skin-quality scores at each timepoint; change is the mean paired follow-up − baseline. Illustrative and non-diagnostic — not a validated clinical trial output.
+    <span>
+        Data can be exported for offline analysis —
+        <a asp-controller="Export" asp-action="Index">open Export</a>.
+    </span>
+</div>
+
+<div class="card mb-3">
+    <div class="card-h"><h3>Baseline vs follow-up mean by arm</h3></div>
+    <div class="card-b">
+        @if (!hasData)
+        {
+            <div class="empty">
+                <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
+                <p class="mt-2">No analyzed assessments to compare across arms yet.</p>
+            </div>
+        }
+        else
+        {
+            <canvas id="armChart" height="120"></canvas>
+        }
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-h"><h3>Trial arms</h3><div class="spacer"></div><span class="muted" style="font-size:12.5px">Integrated skin-quality score</span></div>
+    <div class="card-b" style="padding:0">
+        @if (Model.Arms.Count == 0)
+        {
+            <div class="empty">
+                <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 10h8M8 14h5"/></svg>
+                <p class="mt-2">No analyzed assessments yet.</p>
+            </div>
+        }
+        else
+        {
+            <table class="table">
+                <thead><tr><th>Arm</th><th class="num">Subjects</th><th class="num">Mean baseline</th><th class="num">Mean follow-up</th><th class="num">Mean change</th><th class="num">Paired n</th></tr></thead>
+                <tbody>
+                @foreach (var a in Model.Arms)
+                {
+                    <tr>
+                        <td><strong>@a.Arm</strong></td>
+                        <td class="num">@a.SubjectCount</td>
+                        <td class="num">@(a.MeanBaseline.HasValue ? a.MeanBaseline.Value.ToString("0.0") : "—")</td>
+                        <td class="num">@(a.MeanFollowUp.HasValue ? a.MeanFollowUp.Value.ToString("0.0") : "—")</td>
+                        <td class="num">
+                            @if (a.MeanChange.HasValue)
+                            {
+                                <span class="badge @(a.MeanChange.Value >= 0 ? "badge-ok" : "badge-warn")">@a.MeanChange.Value.ToString("+0.0;-0.0")</span>
+                            }
+                            else
+                            {
+                                <span class="muted">—</span>
+                            }
+                        </td>
+                        <td class="num">@(a.PairedN > 0 ? a.PairedN.ToString() : "—")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<p class="muted mt-3" style="font-size:12px">Research-use clinical-trial mode. Figures are illustrative and non-diagnostic; not a validated clinical trial result.</p>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        const armLabels = @Html.Raw(JsonSerializer.Serialize(armLabels));
+        const baselineData = @Html.Raw(JsonSerializer.Serialize(baselineData));
+        const followData = @Html.Raw(JsonSerializer.Serialize(followData));
+
+        const el = document.getElementById('armChart');
+        if (el && armLabels.length) {
+            new Chart(el, {
+                type: 'bar',
+                data: {
+                    labels: armLabels,
+                    datasets: [
+                        { label: 'Baseline', data: baselineData, backgroundColor: 'rgba(11,114,133,.8)' },
+                        { label: 'Follow-up', data: followData, backgroundColor: 'rgba(18,165,148,.8)' }
+                    ]
+                },
+                options: {
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { suggestedMin: 0, suggestedMax: 100, title: { display: true, text: 'Integrated score' } } }
+                }
+            });
+        }
+    </script>
+}

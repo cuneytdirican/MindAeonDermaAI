@@ -1,0 +1,75 @@
+@using MindAeonDermaAI.Web.Controllers
+@using MindAeonDermaAI.Infrastructure.Identity
+@model CreateUserViewModel
+@{
+    ViewData["Title"] = "Add user";
+}
+
+<div class="page-head">
+    <h1>Add user</h1>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-action="Index">Back to users</a>
+</div>
+
+<div class="grid cols-3">
+    <div class="card" style="grid-column: span 2">
+        <div class="card-h"><h3>New user</h3></div>
+        <div class="card-b">
+            <form asp-action="Create" method="post">
+                <div asp-validation-summary="All" class="alert alert-err" style="@(ViewData.ModelState.ErrorCount == 0 ? "display:none" : "")"></div>
+
+                <div class="row-2">
+                    <div class="field">
+                        <label asp-for="Email">Email</label>
+                        <input asp-for="Email" class="input" type="email" autofocus autocomplete="off" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="FullName">Full name</label>
+                        <input asp-for="FullName" class="input" placeholder="optional" />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row-2">
+                    <div class="field">
+                        <label asp-for="Password">Password</label>
+                        <input asp-for="Password" class="input" type="password" autocomplete="new-password" />
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="Role">Role</label>
+                        <select asp-for="Role" class="input">
+                            @foreach (var role in AppRoles.All)
+                            {
+                                <option value="@role">@role</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Role" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button class="btn btn-primary" type="submit">Create user</button>
+                    <a class="btn btn-ghost" asp-action="Index">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-h"><h3>About roles</h3></div>
+        <div class="card-b">
+            <p class="muted">
+                <strong>Admin</strong> manages users, AI providers and settings.
+                <strong>Clinician</strong> creates subjects and assessments.
+                <strong>Reviewer</strong> has read/review access.
+            </p>
+            <div class="disclaimer mt-4">New users are created with a confirmed email. Research use only.</div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

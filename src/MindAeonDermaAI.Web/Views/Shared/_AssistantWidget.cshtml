@@ -1,0 +1,108 @@
+@{
+    var rc = ViewContext.RouteData.Values;
+    string ctl = (rc["controller"] as string) ?? "";
+    string act = (rc["action"] as string) ?? "";
+    string idStr = (rc["id"] as string) ?? "";
+    int? focusId = string.Equals(ctl, "Assessments", StringComparison.OrdinalIgnoreCase) && int.TryParse(idStr, out var pid) ? pid : (int?)null;
+
+    string ctx = (ctl, act) switch
+    {
+        ("Home", _) => "the dashboard",
+        ("Analytics", _) => "the analytics dashboard (population stats, references, batch-drift)",
+        ("Subjects", "Index") => "the subjects list",
+        ("Subjects", "Details") => $"subject record #{idStr}",
+        ("Subjects", "Create") => "the new-subject form",
+        ("Assessments", "Index") => "the assessments list",
+        ("Assessments", "Details") => $"the details of assessment #{idStr}",
+        ("Assessments", "Report") => $"the full report of assessment #{idStr}",
+        ("Assessments", "Create") => "the new-assessment form",
+        ("AiProviders", _) => "the AI providers admin page",
+        ("Lookups", _) => "the reference-data page",
+        _ => $"the {ctl} page"
+    };
+}
+<div id="fab-token" data-ctx="@ctx" data-focus="@(focusId?.ToString() ?? "")"></div>
+<button type="button" id="fabLaunch" class="fab-launch" title="AI Assistant" aria-label="Open AI Assistant">
+    <span class="fab-badge">AI</span>
+    <svg class="open-i" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 00-9 9 9 9 0 001.5 5L3 21l4-1.5A9 9 0 1012 3z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>
+    <svg class="close-i" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg>
+</button>
+
+<div id="fabPanel" class="fab-panel" role="dialog" aria-label="AI Assistant">
+    <div class="fab-head">
+        <div>
+            <div class="t">MindAeon Assistant</div>
+            <div class="s">Data-grounded · non-diagnostic</div>
+        </div>
+        <div class="ctx" id="fabCtx" title="@ctx">@ctx</div>
+    </div>
+    <div class="fab-body" id="fabBody"></div>
+    <div class="fab-foot">
+        <button type="button" id="fabMic" class="ib" title="Voice input">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
+        </button>
+        <button type="button" id="fabSpeak" class="ib" title="Read answers aloud">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8a5 5 0 010 8"/></svg>
+        </button>
+        <textarea id="fabInput" placeholder="Ask about this page or your data…"></textarea>
+        <button type="button" id="fabSend" class="send" title="Send">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12h14M12 6l6 6-6 6"/></svg>
+        </button>
+    </div>
+</div>
+
+<script>
+(function () {
+  const launch = document.getElementById('fabLaunch'), panel = document.getElementById('fabPanel');
+  const body = document.getElementById('fabBody'), input = document.getElementById('fabInput');
+  const meta = document.getElementById('fab-token');
+  const ctx = meta.dataset.ctx || '', focus = meta.dataset.focus ? parseInt(meta.dataset.focus) : null;
+  const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+  const askUrl = '@Url.Action("Ask", "Assistant")';
+  let busy = false, speakOn = false;
+  let history = [];
+  try { history = JSON.parse(sessionStorage.getItem('fabHist') || '[]'); } catch (_) {}
+
+  function esc(s){ return (s||'').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+  function add(role, text){
+    const w = document.createElement('div'); w.className = 'msg ' + (role === 'user' ? 'user' : 'ai');
+    w.innerHTML = `<div class="ava">${role === 'user' ? 'You' : 'AI'}</div><div class="b">${text}</div>`;
+    body.appendChild(w); body.scrollTop = body.scrollHeight; return w.querySelector('.b');
+  }
+  function render(){ body.innerHTML = ''; if (!history.length) add('ai', esc("Hi! Ask me about " + ctx + ", your data, or any skin-biology question. Platform answers come only from your database.")); else history.forEach(m => add(m.role, esc(m.content))); }
+  function save(){ try { sessionStorage.setItem('fabHist', JSON.stringify(history.slice(-20))); } catch (_) {} }
+
+  function setOpen(o){ panel.classList.toggle('open', o); launch.classList.toggle('open', o); localStorage.setItem('fabOpen', o ? '1' : '0'); if (o) { render(); setTimeout(()=>input.focus(), 50); } }
+  launch.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
+
+  async function ask(text){
+    if (busy || !text.trim()) return; busy = true;
+    add('user', esc(text)); history.push({ role:'user', content:text }); save(); input.value = '';
+    const t = add('ai', '<span class="typing"><span></span><span></span><span></span></span>').parentElement;
+    try {
+      const res = await fetch(askUrl, { method:'POST', headers:{'Content-Type':'application/json','RequestVerificationToken':token},
+        body: JSON.stringify({ messages: history.slice(-12), assessmentId: focus, pageContext: ctx }) });
+      const data = await res.json(); t.remove();
+      const reply = data.reply || 'No response.'; add('ai', esc(reply)); history.push({ role:'assistant', content: reply }); save();
+      if (speakOn && 'speechSynthesis' in window) { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(reply.slice(0,600))); }
+    } catch (e) { t.remove(); add('ai', 'Network error.'); }
+    busy = false;
+  }
+  document.getElementById('fabSend').addEventListener('click', () => ask(input.value));
+  input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(input.value); } });
+
+  const speakBtn = document.getElementById('fabSpeak');
+  speakBtn.addEventListener('click', () => { speakOn = !speakOn; speakBtn.classList.toggle('on', speakOn); if (!speakOn && 'speechSynthesis' in window) speechSynthesis.cancel(); });
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition, micBtn = document.getElementById('fabMic');
+  if (SR) {
+    const rec = new SR(); rec.lang = document.documentElement.lang || 'en-US'; rec.interimResults = true; let listening = false;
+    micBtn.addEventListener('click', () => { if (listening) rec.stop(); else { try { rec.start(); } catch (_) {} } });
+    rec.onstart = () => { listening = true; micBtn.classList.add('rec'); };
+    rec.onend = () => { listening = false; micBtn.classList.remove('rec'); };
+    rec.onresult = e => { let txt=''; for (let i=0;i<e.results.length;i++) txt += e.results[i][0].transcript; input.value = txt; if (e.results[e.results.length-1].isFinal) setTimeout(()=>ask(input.value), 200); };
+  } else { micBtn.disabled = true; micBtn.title = 'Voice not supported (use Chrome/Edge)'; }
+
+  if (localStorage.getItem('fabOpen') === '1') setOpen(true);
+})();
+</script>

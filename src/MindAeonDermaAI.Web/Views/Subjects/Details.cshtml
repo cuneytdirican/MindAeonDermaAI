@@ -1,0 +1,119 @@
+@model MindAeonDermaAI.Web.Controllers.SubjectDetailsViewModel
+@{
+    var s = Model.Subject;
+    ViewData["Title"] = $"Subject {s.Code}";
+    string V(string? x) => string.IsNullOrEmpty(x) ? "—" : x;
+}
+
+<div class="page-head">
+    <h1>@s.Code @(string.IsNullOrEmpty(s.DisplayName) ? "" : $"· {s.DisplayName}")</h1>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-controller="Subjects" asp-action="Index">Back to list</a>
+    <a class="btn btn-ghost" asp-controller="Timeline" asp-action="Subject" asp-route-id="@s.Id">Timeline</a>
+    <a class="btn btn-ghost" asp-controller="Wearables" asp-action="Subject" asp-route-id="@s.Id">Wearables</a>
+    <a class="btn btn-ghost" asp-controller="Genomics" asp-action="Subject" asp-route-id="@s.Id">Genomics</a>
+    <a class="btn btn-primary" asp-controller="Assessments" asp-action="Create" asp-route-subjectId="@s.Id">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        New assessment
+    </a>
+</div>
+
+<div class="grid cols-2">
+    <div class="card">
+        <div class="card-h"><h3>Profile</h3></div>
+        <div class="card-b">
+            <div class="row-3 mb-3">
+                <div class="field mb-0"><label>Age</label><div>@(s.Age?.ToString() ?? "—")</div></div>
+                <div class="field mb-0"><label>Height (cm)</label><div>@(s.HeightCm?.ToString("0.#") ?? "—")</div></div>
+                <div class="field mb-0"><label>Weight (kg)</label><div>@(s.WeightKg?.ToString("0.#") ?? "—")</div></div>
+            </div>
+            <div class="row-3">
+                <div class="field mb-0"><label>BMI</label><div>@(s.Bmi?.ToString("0.0") ?? "—")</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-h"><h3>Demographics</h3></div>
+        <div class="card-b">
+            <div class="row-2 mb-3">
+                <div class="field mb-0"><label>Sex</label><div>@V(s.Sex?.Name)</div></div>
+                <div class="field mb-0"><label>Skin type</label><div>@V(s.SkinType?.Name)</div></div>
+            </div>
+            <div class="row-2">
+                <div class="field mb-0"><label>Fitzpatrick type</label><div>@V(s.FitzpatrickType?.Name)</div></div>
+                <div class="field mb-0"><label>Menopause status</label><div>@V(s.MenopauseStatus?.Name)</div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-h"><h3>Lifestyle</h3></div>
+    <div class="card-b">
+        <div class="grid cols-3">
+            <div class="field mb-0"><label>Smoking status</label><div>@V(s.SmokingStatus?.Name)</div></div>
+            <div class="field mb-0"><label>Alcohol use</label><div>@V(s.AlcoholUse?.Name)</div></div>
+            <div class="field mb-0"><label>Sleep quality</label><div>@V(s.SleepQuality?.Name)</div></div>
+            <div class="field mb-0"><label>Stress level</label><div>@V(s.StressLevel?.Name)</div></div>
+            <div class="field mb-0"><label>UV exposure level</label><div>@V(s.UVExposureLevel?.Name)</div></div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-h"><h3>Prior aesthetic procedures</h3></div>
+    <div class="card-b">
+        @if (s.AestheticProcedures.Count == 0)
+        {
+            <p class="muted mb-0">None recorded.</p>
+        }
+        else
+        {
+            <div class="tag-list">
+                @foreach (var p in s.AestheticProcedures)
+                {
+                    <span class="chip">@V(p.AestheticProcedure?.Name)</span>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-h">
+        <h3>Assessments</h3>
+        <div class="spacer" style="flex:1"></div>
+        <a class="btn btn-dark btn-sm" asp-controller="Assessments" asp-action="Create" asp-route-subjectId="@s.Id">New assessment</a>
+    </div>
+    <div class="card-b" style="padding:0">
+        @if (Model.Assessments.Count == 0)
+        {
+            <div class="empty">
+                <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 10h8M8 14h5"/></svg>
+                <p class="mt-2">No assessments for this subject yet.</p>
+                <a class="btn btn-primary btn-sm" asp-controller="Assessments" asp-action="Create" asp-route-subjectId="@s.Id">New assessment</a>
+            </div>
+        }
+        else
+        {
+            <table class="table">
+                <thead><tr><th>Status</th><th>Time point</th><th>Panel</th><th>Created</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var a in Model.Assessments)
+                {
+                    <tr>
+                        <td><span class="badge badge-navy">@a.Status</span></td>
+                        <td>@a.TimePoint</td>
+                        <td>@(a.Panel ?? "—")</td>
+                        <td class="muted">@a.CreatedAtUtc.ToString("yyyy-MM-dd")</td>
+                        <td class="num"><a class="btn btn-ghost btn-sm" asp-controller="Assessments" asp-action="Details" asp-route-id="@a.Id">Open</a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<div class="disclaimer mt-4">Research use only. Not a medical diagnosis.</div>

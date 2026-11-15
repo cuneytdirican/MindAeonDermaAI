@@ -1,0 +1,144 @@
+@model AssessmentDetailsViewModel
+@using MindAeonDermaAI.Core.Enums
+@{
+    ViewData["Title"] = $"Assessment · {Model.SubjectCode}";
+}
+<div class="page-head">
+    <h1>Assessment #@Model.Id</h1>
+    <span class="badge badge-navy">@Model.Status</span>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-action="Index">All assessments</a>
+    @if (Model.HasScore)
+    {
+        <a class="btn btn-dark" asp-action="Report" asp-route-id="@Model.Id">View report</a>
+    }
+</div>
+
+<div class="grid cols-3 mb-3">
+    <div class="card"><div class="card-b">
+        <div class="l muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.05em">Subject</div>
+        <div style="font-size:18px;font-weight:700;color:var(--navy-800)">@Model.SubjectCode</div>
+        <div class="muted">@Model.SubjectName</div>
+        <div class="mt-2 muted" style="font-size:13px">@Model.TimePoint · @(Model.InterventionCategory ?? "No intervention")</div>
+    </div></div>
+    <div class="card"><div class="card-b">
+        <div class="l muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.05em">Integrated score</div>
+        <div class="score-big">@(Model.IntegratedScore.HasValue ? Model.IntegratedScore.Value.ToString("0") : "—")<span style="font-size:16px;color:var(--muted)">@(Model.IntegratedScore.HasValue ? "/100" : "")</span></div>
+        <div class="muted" style="font-size:13px">@(Model.SelectedPanel ?? "Not analyzed yet")</div>
+    </div></div>
+    <div class="card"><div class="card-b">
+        <div class="l muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.05em">Phenotype</div>
+        <div style="font-size:16px;font-weight:700;color:var(--navy-800);line-height:1.3">@(Model.Phenotype ?? "—")</div>
+        <div class="muted mt-2" style="font-size:13px">@Model.Measurements.Count biomarkers · @Model.Images.Count image(s)</div>
+    </div></div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-h"><h3>Analysis pipeline</h3></div>
+    <div class="card-b">
+        @if (!Model.AiReady)
+        {
+            <div class="alert alert-info">No vision-capable AI provider is configured. Image analysis will be skipped; deterministic scoring and a fallback narrative are still produced. <a asp-controller="AiProviders" asp-action="Index">Configure providers</a>.</div>
+        }
+        <div class="flex gap-2" style="flex-wrap:wrap">
+            @if (Model.Images.Count > 0 && Model.AnalyzedImageCount < Model.Images.Count)
+            {
+                <form asp-action="AnalyzeImages" asp-route-id="@Model.Id" method="post">
+                    <button class="btn btn-ghost" type="submit">① Analyze images (@Model.AnalyzedImageCount/@Model.Images.Count)</button>
+                </form>
+            }
+            <form asp-action="RunAnalysis" asp-route-id="@Model.Id" method="post">
+                <button class="btn btn-primary" type="submit">② Run analysis</button>
+            </form>
+            <form asp-action="Generate" asp-route-id="@Model.Id" method="post">
+                <button class="btn btn-dark" type="submit">③ Generate report</button>
+            </form>
+        </div>
+        <div class="hint mt-2">Analyze images (optional) → run the deterministic scoring engine → generate the empathetic narrative report.</div>
+    </div>
+</div>
+
+@if (Model.AssayBatch != null || Model.ExposomeUvIndex.HasValue || Model.ExposomePm25.HasValue || Model.ExposomeHumidity.HasValue || Model.ZoneCount > 0 || Model.Instruments.Count > 0)
+{
+    <div class="card mb-3"><div class="card-h"><h3>Context &amp; multi-omics</h3></div>
+        <div class="card-b">
+            <div class="tag-list">
+                @if (Model.AssayBatch != null) { <span class="chip">Assay: @Model.AssayBatch</span> }
+                @if (Model.ExposomeUvIndex.HasValue) { <span class="chip">UV @Model.ExposomeUvIndex.Value.ToString("0.#")</span> }
+                @if (Model.ExposomePm25.HasValue) { <span class="chip">PM2.5 @Model.ExposomePm25.Value.ToString("0")</span> }
+                @if (Model.ExposomeHumidity.HasValue) { <span class="chip">Humidity @Model.ExposomeHumidity.Value.ToString("0")%</span> }
+                @if (Model.ZoneCount > 0) { <span class="chip">@Model.ZoneCount facial zones scored</span> }
+                @foreach (var ins in Model.Instruments) { <span class="chip">@ins.Name: @ins.Value.ToString("0.##")</span> }
+            </div>
+        </div>
+    </div>
+}
+
+<div class="grid cols-2">
+    <div class="card">
+        <div class="card-h"><h3>Skin images</h3></div>
+        <div class="card-b">
+            @if (Model.Images.Count == 0)
+            {
+                <p class="muted">No images uploaded.</p>
+            }
+            else
+            {
+                <div class="grid cols-3">
+                    @foreach (var im in Model.Images)
+                    {
+                        <div class="card">
+                            @if (im.Id > 0 && im.Analyzed && im.Overall == null)
+                            {
+                            }
+                            <img src="@Url.Action("Image", new { id = im.Id })" style="width:100%;height:120px;object-fit:cover;border-radius:12px 12px 0 0;background:#eef2f7" onerror="this.style.display='none'"/>
+                            <div class="card-b" style="padding:10px">
+                                @if (im.Analyzed)
+                                {
+                                    <span class="badge badge-ok">Overall @(im.Overall?.ToString("0") ?? "—")</span>
+                                    <div class="tag-list mt-2">
+                                        @if (im.Makeup) { <span class="chip">makeup</span> }
+                                        @if (im.Filter) { <span class="chip">filter</span> }
+                                        @if (im.Lighting) { <span class="chip">lighting</span> }
+                                        @if (im.Angle) { <span class="chip">angle</span> }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-warn">Pending analysis</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-h"><h3>Protein biomarkers</h3></div>
+        <div class="card-b" style="padding:0">
+            @if (Model.Measurements.Count == 0)
+            {
+                <p class="muted" style="padding:20px">No measurements entered.</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead><tr><th>Biomarker</th><th>Domain</th><th class="num">Value</th><th class="num">z</th></tr></thead>
+                    <tbody>
+                    @foreach (var m in Model.Measurements)
+                    {
+                        <tr>
+                            <td>@m.Name</td>
+                            <td class="muted">@m.Domain</td>
+                            <td class="num">@(m.Value?.ToString("0.#") ?? "—") <span class="muted" style="font-size:11px">@m.Unit</span></td>
+                            <td class="num">@(m.Z?.ToString("0.0") ?? "—")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>

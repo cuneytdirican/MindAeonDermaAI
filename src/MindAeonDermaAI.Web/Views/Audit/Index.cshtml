@@ -1,0 +1,99 @@
+@using MindAeonDermaAI.Web.Controllers
+@model AuditViewModel
+@{
+    ViewData["Title"] = "Audit log";
+}
+
+<div class="page-head">
+    <h1>Audit log</h1>
+    <div class="spacer"></div>
+    <span class="muted">Showing up to @Model.Take recent records</span>
+</div>
+
+<div class="card mb-3">
+    <div class="card-h"><h3>AI calls</h3></div>
+    <div class="card-b" style="padding:0">
+        @if (Model.AiCalls.Count == 0)
+        {
+            <div class="empty">
+                <p class="mt-2">No AI calls logged yet.</p>
+            </div>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>Provider</th>
+                    <th>Model</th>
+                    <th>Task</th>
+                    <th>Result</th>
+                    <th class="num">Latency</th>
+                    <th class="num">Tokens (p/c)</th>
+                    <th>Date (UTC)</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var c in Model.AiCalls)
+                {
+                    <tr>
+                        <td><strong>@c.Provider</strong></td>
+                        <td class="muted">@(string.IsNullOrEmpty(c.Model) ? "—" : c.Model)</td>
+                        <td><span class="badge badge-muted">@c.TaskKind</span></td>
+                        <td>
+                            @if (c.Success) { <span class="badge badge-ok">OK</span> }
+                            else { <span class="badge badge-danger" title="@c.Error">Error</span> }
+                        </td>
+                        <td class="num">@c.LatencyMs ms</td>
+                        <td class="num">@(c.PromptTokens?.ToString() ?? "—") / @(c.CompletionTokens?.ToString() ?? "—")</td>
+                        <td class="muted">@c.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-h"><h3>User actions</h3></div>
+    <div class="card-b" style="padding:0">
+        @if (Model.Actions.Count == 0)
+        {
+            <div class="empty">
+                <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/></svg>
+                <p class="mt-2">No user-action audit records yet. This log is being populated as users act on the platform.</p>
+            </div>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Entity</th>
+                    <th>Details</th>
+                    <th>IP</th>
+                    <th>Date (UTC)</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var a in Model.Actions)
+                {
+                    <tr>
+                        <td><strong>@(string.IsNullOrEmpty(a.UserName) ? (a.UserId ?? "—") : a.UserName)</strong></td>
+                        <td><span class="badge badge-navy">@a.Action</span></td>
+                        <td class="muted">
+                            @(string.IsNullOrEmpty(a.EntityType) ? "—" : a.EntityType)@(a.EntityId.HasValue ? $" #{a.EntityId}" : "")
+                        </td>
+                        <td class="muted">@(string.IsNullOrEmpty(a.Details) ? "—" : a.Details)</td>
+                        <td class="muted">@(string.IsNullOrEmpty(a.Ip) ? "—" : a.Ip)</td>
+                        <td class="muted">@a.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

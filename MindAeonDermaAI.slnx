@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MindAeonDermaAI.Analysis/MindAeonDermaAI.Analysis.csproj" />
+    <Project Path="src/MindAeonDermaAI.Core/MindAeonDermaAI.Core.csproj" />
+    <Project Path="src/MindAeonDermaAI.Infrastructure/MindAeonDermaAI.Infrastructure.csproj" />
+    <Project Path="src/MindAeonDermaAI.Web/MindAeonDermaAI.Web.csproj" />
+  </Folder>
+</Solution>

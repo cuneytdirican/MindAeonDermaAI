@@ -1,0 +1,88 @@
+@using MindAeonDermaAI.Web.Models
+@model MindAeonDermaAI.Web.Controllers.WearableSubjectVm
+@{
+    ViewData["Title"] = "Wearables";
+    var s = Model.Subject;
+}
+
+<div class="page-head">
+    <div>
+        <h1 style="margin-bottom:2px">Wearables intake</h1>
+        <div class="muted">Subject @s.Code@(string.IsNullOrEmpty(s.DisplayName) ? "" : $" · {s.DisplayName}") · Research use · Non-diagnostic</div>
+    </div>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-controller="Subjects" asp-action="Details" asp-route-id="@s.Id">Back to subject</a>
+</div>
+
+<div class="alert alert-info">
+    Sleep duration/quality, stress, HRV and recovery signals from wearables enrich the lifestyle &amp; exposome
+    context for this subject. These readings are contextual research inputs, not diagnostic measures.
+</div>
+
+<div class="card mt-4">
+    <div class="card-h"><h3>Add reading</h3></div>
+    <div class="card-b">
+        <form asp-action="Add" asp-route-id="@s.Id" method="post">
+            <div class="grid cols-2">
+                <div class="field">
+                    <label>Source</label>
+                    @await Html.PartialAsync("_SmartSelect", new SmartSelectModel { FieldName = "wearableSourceId", Entity = "wearableSource", Placeholder = "Select source" })
+                </div>
+                <div class="field">
+                    <label>Metric</label>
+                    @await Html.PartialAsync("_SmartSelect", new SmartSelectModel { FieldName = "wearableMetricTypeId", Entity = "wearableMetricType", Placeholder = "Select metric" })
+                </div>
+            </div>
+            <div class="row-3">
+                <div class="field">
+                    <label>Value</label>
+                    <input class="input" type="number" step="any" name="value" placeholder="e.g. 7.5" required />
+                </div>
+                <div class="field">
+                    <label>Unit <span class="muted">(optional)</span></label>
+                    <input class="input" type="text" name="unit" maxlength="30" placeholder="e.g. hours, ms, bpm" />
+                </div>
+                <div class="field">
+                    <label>Recorded at <span class="muted">(optional)</span></label>
+                    <input class="input" type="datetime-local" name="recordedAt" />
+                </div>
+            </div>
+            <div class="hint">Leave the date blank to record now (UTC).</div>
+            <div class="flex gap-2 mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    Add reading
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-h"><h3>Readings <span class="muted">(@Model.Readings.Count)</span></h3></div>
+    <div class="card-b">
+        @if (Model.Readings.Count == 0)
+        {
+            <div class="empty"><p>No wearable readings yet. Add the first above.</p></div>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr><th>Source</th><th>Metric</th><th>Value</th><th>Recorded at</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Readings)
+                    {
+                        <tr>
+                            <td>@(r.WearableSource?.Name ?? "—")</td>
+                            <td>@(r.WearableMetricType?.Name ?? "—")</td>
+                            <td>@r.Value.ToString("0.##")@(string.IsNullOrEmpty(r.Unit) ? "" : $" {r.Unit}")</td>
+                            <td class="muted">@r.RecordedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

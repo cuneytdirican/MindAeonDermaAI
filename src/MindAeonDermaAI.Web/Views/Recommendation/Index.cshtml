@@ -1,0 +1,84 @@
+@using MindAeonDermaAI.Web.Controllers
+@model RecommendationVm
+@{
+    ViewData["Title"] = "Ingredient recommendations";
+    var groups = Model.Recommendations
+        .GroupBy(r => r.Concern)
+        .OrderBy(g => g.Key == "Photoprotection (baseline)" ? 1 : 0)
+        .ToList();
+}
+
+<div class="page-head">
+    <div>
+        <h1 style="margin-bottom:2px">Cosmetic-ingredient recommendations</h1>
+        <div class="muted">
+            Subject @Model.Subject?.Code · Assessment #@Model.Assessment.Id ·
+            Integrated score @Model.Score.IntegratedSkinQualityScore.ToString("0")/100 · Research use
+        </div>
+    </div>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-controller="Assessments" asp-action="Details" asp-route-id="@Model.Assessment.Id">Back</a>
+    <a class="btn btn-dark" asp-action="Ingredients" asp-route-id="@Model.Assessment.Id">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        Check a product's INCI
+    </a>
+</div>
+
+@if (TempData["Err"] is string err)
+{
+    <div class="alert alert-err">@err</div>
+}
+
+<div class="alert alert-info">
+    <strong>Cosmetic education only.</strong> These are general, non-diagnostic cosmetic-ingredient suggestions derived
+    from the assessment's biology profile. They are not medical advice, a treatment plan, or a product endorsement.
+</div>
+
+@if (groups.Count == 0)
+{
+    <div class="card"><div class="card-b">
+        <div class="empty"><p>No specific ingredient suggestions were generated for this profile.</p></div>
+    </div></div>
+}
+else
+{
+    <div class="grid cols-2 mb-3">
+        @foreach (var g in groups)
+        {
+            <div class="card">
+                <div class="card-h">
+                    <h3>@g.Key</h3>
+                    <span class="badge badge-teal">@g.Count() ingredient(s)</span>
+                </div>
+                <div class="card-b">
+                    <div class="tag-list mb-2">
+                        @foreach (var r in g)
+                        {
+                            <span class="chip">@r.Ingredient</span>
+                        }
+                    </div>
+                    <table class="table">
+                        <thead><tr><th>Ingredient</th><th>Why it may help</th></tr></thead>
+                        <tbody>
+                        @foreach (var r in g)
+                        {
+                            <tr>
+                                <td><strong>@r.Ingredient</strong></td>
+                                <td class="muted">@r.Rationale</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<div class="card mb-3"><div class="card-b">
+    <div class="disclaimer">
+        For research and prototyping use only. Cosmetic-ingredient information is educational and non-diagnostic;
+        it does not diagnose, treat, or prevent any condition. Patch-test new products and consult a qualified
+        professional for personal skin concerns.
+    </div>
+</div></div>

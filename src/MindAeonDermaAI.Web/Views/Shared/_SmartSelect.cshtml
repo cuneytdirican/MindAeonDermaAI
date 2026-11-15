@@ -1,0 +1,29 @@
+@model MindAeonDermaAI.Web.Models.SmartSelectModel
+<div class="smartselect" data-entity="@Model.Entity" data-allow-create="@(Model.AllowCreate ? "true" : "false")">
+    <input type="hidden" name="@Model.FieldName" value="@(Model.SelectedId?.ToString() ?? "")" />
+    <div class="ss-control" tabindex="0" role="combobox" aria-expanded="false">
+        <span class="ss-value @(Model.SelectedId is null ? "placeholder" : "")">@(Model.SelectedName ?? Model.Placeholder)</span>
+        <span class="ss-caret">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </span>
+    </div>
+    <div class="ss-panel">
+        <input class="ss-search" type="text" placeholder="Search…" autocomplete="off" />
+        <div class="ss-list"></div>
+        @if (Model.AllowCreate)
+        {
+            <div class="ss-add">
+                <button type="button" class="btn btn-ghost btn-sm ss-addbtn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    @Model.CreateLabel
+                </button>
+                <div class="ss-create">
+                    <input class="ss-newname input btn-sm" type="text" placeholder="New value name" />
+                    <input class="ss-newdesc input btn-sm mt-2" type="text" placeholder="Description (optional)" />
+                    <div class="ss-err"></div>
+                    <button type="button" class="btn btn-primary btn-sm btn-block mt-2 ss-savebtn">Save &amp; select</button>
+                </div>
+            </div>
+        }
+    </div>
+</div>

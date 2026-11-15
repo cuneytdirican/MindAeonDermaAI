@@ -1,0 +1,71 @@
+@using MindAeonDermaAI.Web.Controllers
+@model HealthViewModel
+@{
+    ViewData["Title"] = "System health";
+}
+
+<div class="page-head">
+    <h1>System health</h1>
+</div>
+
+<div class="grid cols-4 mb-3">
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@Model.SubjectCount</div><div class="l">Subjects</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+    </div></div>
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@Model.AssessmentCount</div><div class="l">Assessments</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 10h8M8 14h5"/></svg></div>
+    </div></div>
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@Model.ReportCount</div><div class="l">Reports</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/></svg></div>
+    </div></div>
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi">
+            <div class="v">@Model.RecentAiErrors</div>
+            <div class="l">AI errors (last @Model.RecentAiSample)</div>
+        </div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0z"/></svg></div>
+    </div></div>
+</div>
+
+<div class="card">
+    <div class="card-h"><h3>Status</h3></div>
+    <div class="card-b" style="padding:0">
+        <table class="table">
+            <thead><tr><th>Check</th><th>Status</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td><strong>Database</strong> <span class="muted">— connectivity</span></td>
+                    <td>
+                        @if (Model.DbReachable) { <span class="badge badge-ok">Reachable</span> }
+                        else { <span class="badge badge-danger">Unreachable</span> }
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>AI chat</strong> <span class="muted">— usable provider</span></td>
+                    <td>
+                        @if (Model.ChatReady) { <span class="badge badge-ok">Ready</span> }
+                        else { <span class="badge badge-warn">Not configured</span> }
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>AI vision</strong> <span class="muted">— usable provider</span></td>
+                    <td>
+                        @if (Model.VisionReady) { <span class="badge badge-ok">Ready</span> }
+                        else { <span class="badge badge-warn">Not configured</span> }
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>AI error rate</strong> <span class="muted">— last @Model.RecentAiSample calls</span></td>
+                    <td>
+                        @if (Model.RecentAiSample == 0) { <span class="badge badge-muted">No calls yet</span> }
+                        else if (Model.RecentAiErrors == 0) { <span class="badge badge-ok">No errors</span> }
+                        else { <span class="badge badge-danger">@Model.RecentAiErrors error(s)</span> }
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

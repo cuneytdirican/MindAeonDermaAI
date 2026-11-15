@@ -1,0 +1,63 @@
+@{
+    ViewData["Title"] = "Research export";
+}
+
+<div class="page-head">
+    <h1>Research export</h1>
+    <div class="spacer"></div>
+    <span class="hint">CSV &amp; JSON · analysis-ready</span>
+</div>
+
+<div class="grid cols-2">
+    <div class="card">
+        <div class="card-h"><h3>Download datasets</h3></div>
+        <div class="card-b">
+            <p class="muted mb-3">
+                Flat tables and a combined bundle for downstream analysis. CSVs are UTF-8 (with BOM) so they
+                open cleanly in Excel; the JSON bundle nests scores under each assessment.
+            </p>
+            <div class="grid cols-2">
+                <a class="btn btn-primary" asp-action="SubjectsCsv" download>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+                    Subjects CSV
+                </a>
+                <a class="btn btn-primary" asp-action="AssessmentsCsv" download>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+                    Assessments CSV
+                </a>
+                <a class="btn btn-primary" asp-action="MeasurementsCsv" download>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+                    Measurements CSV
+                </a>
+                <a class="btn btn-ghost" asp-action="BundleJson" download>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+                    JSON bundle
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-h"><h3>Using the data</h3></div>
+        <div class="card-b">
+            <p class="muted mb-3">
+                The exports are tidy, code-linked tables ready for common statistical tooling:
+            </p>
+            <ul class="muted mb-3">
+                <li><strong>R</strong> — <code>read.csv("subjects.csv")</code> or <code>readr::read_csv()</code>; <code>jsonlite::fromJSON()</code> for the bundle.</li>
+                <li><strong>Python</strong> — <code>pandas.read_csv(...)</code>; <code>pandas.read_json(...)</code> or <code>json.load(...)</code>.</li>
+                <li><strong>SPSS</strong> — File &rarr; Import Data &rarr; CSV Data.</li>
+                <li><strong>SAS</strong> — <code>PROC IMPORT DBMS=CSV</code>.</li>
+            </ul>
+            <p class="muted">
+                Join tables on <code>SubjectCode</code> and <code>AssessmentId</code>. Measurements are in long
+                (tidy) format — one row per biomarker per assessment.
+            </p>
+            <div class="disclaimer">
+                Research use only. Not a medical diagnosis. Anonymized subjects have their display name
+                suppressed (the non-identifying code is retained). Reference statistics may be synthetic and
+                must not be presented as validated clinical ranges.
+            </div>
+        </div>
+    </div>
+</div>

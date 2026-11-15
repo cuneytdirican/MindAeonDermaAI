@@ -1,0 +1,199 @@
+@using MindAeonDermaAI.Web.Controllers
+@model AnalyticsViewModel
+@{
+    ViewData["Title"] = "Analytics";
+
+    // Meter scaling for phenotype/panel distributions (relative to the largest group).
+    var phenoMax = Model.PhenotypeDistribution.Count > 0 ? Model.PhenotypeDistribution.Max(x => x.Count) : 0;
+    var panelMax = Model.PanelDistribution.Count > 0 ? Model.PanelDistribution.Max(x => x.Count) : 0;
+
+    // Batch-drift meter scaling relative to min/max mean across batches.
+    var driftMin = Model.BatchDrift.Count > 0 ? Model.BatchDrift.Min(x => x.Mean) : 0;
+    var driftMax = Model.BatchDrift.Count > 0 ? Model.BatchDrift.Max(x => x.Mean) : 0;
+}
+
+<div class="page-head">
+    <h1>Analytics</h1>
+    <div class="spacer"></div>
+    <form asp-action="Recalibrate" method="post" style="margin:0">
+        <button type="submit" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v6h6"/><path d="M20 20v-6h-6"/><path d="M20 9a8 8 0 0 0-14-3L4 10"/><path d="M4 15a8 8 0 0 0 14 3l2-4"/></svg>
+            Recalibrate references from cohort
+        </button>
+    </form>
+</div>
+
+<div class="grid cols-4 mb-3">
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@Model.SubjectCount</div><div class="l">Subjects</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+    </div></div>
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@Model.AnalyzedCount</div><div class="l">Analyzed assessments</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></div>
+    </div></div>
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@(Model.AvgIntegratedScore.HasValue ? Model.AvgIntegratedScore.Value.ToString("0.0") : "—")</div><div class="l">Avg skin score</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 12l4-2"/></svg></div>
+    </div></div>
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@Model.SyntheticCohortCount</div><div class="l">Synthetic-cohort scored</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg></div>
+    </div></div>
+</div>
+
+<div class="grid cols-2 mb-3">
+    <div class="card">
+        <div class="card-h"><h3>Phenotype distribution</h3></div>
+        <div class="card-b">
+            @if (Model.PhenotypeDistribution.Count == 0)
+            {
+                <p class="muted">No analyzed assessments with a classified phenotype yet.</p>
+            }
+            else
+            {
+                @foreach (var p in Model.PhenotypeDistribution)
+                {
+                    var pct = phenoMax > 0 ? (int)Math.Round(100.0 * p.Count / phenoMax) : 0;
+                    <div class="mb-3">
+                        <div class="flex between mb-2"><span style="font-weight:600">@p.Name</span><span class="muted">@p.Count</span></div>
+                        <div class="meter"><span style="width:@(pct)%"></span></div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-h"><h3>Panel distribution</h3></div>
+        <div class="card-b">
+            @if (Model.PanelDistribution.Count == 0)
+            {
+                <p class="muted">No analyzed assessments with a selected panel yet.</p>
+            }
+            else
+            {
+                @foreach (var p in Model.PanelDistribution)
+                {
+                    var pct = panelMax > 0 ? (int)Math.Round(100.0 * p.Count / panelMax) : 0;
+                    <div class="mb-3">
+                        <div class="flex between mb-2"><span style="font-weight:600">@p.Name</span><span class="muted">@p.Count</span></div>
+                        <div class="meter"><span style="width:@(pct)%"></span></div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-h">
+        <h3>Biomarker reference ranges</h3>
+        <div class="spacer"></div>
+        <span class="muted" style="font-size:12.5px">References self-improve as the platform cohort grows.</span>
+    </div>
+    <div class="card-b" style="padding:0">
+        @if (Model.References.Count == 0)
+        {
+            <div class="empty">
+                <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 10h8M8 14h5"/></svg>
+                <p class="mt-2">No biomarkers configured.</p>
+            </div>
+        }
+        else
+        {
+            <table class="table">
+                <thead><tr><th>Biomarker</th><th>Domain</th><th class="num">Young ref (mean±SD)</th><th class="num">Cohort ref (mean±SD)</th><th class="num">n</th><th>Source</th></tr></thead>
+                <tbody>
+                @foreach (var r in Model.References)
+                {
+                    <tr>
+                        <td><strong>@r.Name</strong></td>
+                        <td class="muted">@r.Domain</td>
+                        <td class="num">@r.YoungRefMean.ToString("0.##") ± @r.YoungRefSd.ToString("0.##")</td>
+                        <td class="num">
+                            @if (r.CohortRefN > 0 && r.CohortRefMean.HasValue)
+                            {
+                                @($"{r.CohortRefMean.Value.ToString("0.##")} ± {(r.CohortRefSd ?? 0).ToString("0.##")}")
+                            }
+                            else
+                            {
+                                <span class="muted">—</span>
+                            }
+                        </td>
+                        <td class="num">@(r.CohortRefN > 0 ? r.CohortRefN.ToString() : "—")</td>
+                        <td>
+                            @if (r.CohortRefN >= 8)
+                            {
+                                <span class="badge badge-teal">self-calibrated</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-muted">young ref</span>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-h">
+        <h3>Assay batch-drift</h3>
+        <div class="spacer"></div>
+        @if (Model.Biomarkers.Count > 0)
+        {
+            <form method="get" asp-action="Index" style="margin:0">
+                <select name="biomarkerId" class="input" style="min-width:220px" onchange="this.form.submit()">
+                    @foreach (var b in Model.Biomarkers)
+                    {
+                        if (b.Id == Model.SelectedBiomarkerId)
+                        {
+                            <option value="@b.Id" selected>@b.Name</option>
+                        }
+                        else
+                        {
+                            <option value="@b.Id">@b.Name</option>
+                        }
+                    }
+                </select>
+            </form>
+        }
+    </div>
+    <div class="card-b">
+        @if (Model.BatchDrift.Count == 0)
+        {
+            <div class="empty">
+                <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
+                <p class="mt-2">No assay batches to compare@(Model.SelectedBiomarkerName != null ? $" for {Model.SelectedBiomarkerName}" : "").</p>
+                <p class="muted">Batch-drift monitoring compares per-batch means across assay runs. Set an <strong>Assay batch</strong> value on assessments to enable it.</p>
+            </div>
+        }
+        else
+        {
+            <p class="muted mb-3">Per-batch mean for <strong>@Model.SelectedBiomarkerName</strong>. Bars scale to the min–max mean across batches to make drift visible.</p>
+            <table class="table">
+                <thead><tr><th>Batch</th><th class="num">Mean</th><th class="num">n</th><th style="width:40%"></th></tr></thead>
+                <tbody>
+                @foreach (var d in Model.BatchDrift)
+                {
+                    // Scale each mean within the observed range so drift shows even with narrow spreads.
+                    var pct = driftMax > driftMin
+                        ? (int)Math.Round(100.0 * (d.Mean - driftMin) / (driftMax - driftMin))
+                        : 50;
+                    if (pct < 4) { pct = 4; }
+                    <tr>
+                        <td><strong>@d.Batch</strong></td>
+                        <td class="num">@d.Mean.ToString("0.##")</td>
+                        <td class="num">@d.Count</td>
+                        <td><div class="meter"><span style="width:@(pct)%"></span></div></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

@@ -1,0 +1,70 @@
+@using System.Text.Json
+@using MindAeonDermaAI.Web.Controllers
+@model KnowledgeGraphViewModel
+@{
+    ViewData["Title"] = "Knowledge graph";
+}
+
+<link href="https://unpkg.com/vis-network@9.1.9/styles/vis-network.min.css" rel="stylesheet" />
+
+<div class="page-head">
+    <div>
+        <h1 style="margin-bottom:2px">Biomarker knowledge graph</h1>
+        <div class="muted">Subject @Model.SubjectCode · Assessment #@Model.AssessmentId · Interactive · Research use</div>
+    </div>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-controller="Assessments" asp-action="Report" asp-route-id="@Model.AssessmentId">Back to report</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-h">
+        <h3>Biomarkers → pathways → biological concepts</h3>
+        <span class="badge badge-muted">Non-diagnostic</span>
+    </div>
+    <div class="card-b">
+        <div id="graph" style="height:560px;border:1px solid var(--line);border-radius:14px;background:#fff"></div>
+        <div class="tag-list mt-3">
+            <span class="chip" style="background:#fef2f2;color:#dc2626">red = high need</span>
+            <span class="chip" style="background:#fff7ed;color:#f59e0b">orange = moderate need</span>
+            <span class="chip">grey/teal = near reference</span>
+            <span class="chip" style="background:#ecfdf5;color:#16a34a">green = favorable</span>
+        </div>
+        <p class="hint mt-2">
+            Large teal nodes are biological domains; dark nodes are abstract concepts (Inflammation, Collagen, ECM,
+            Hydration, Barrier); small nodes are this subject's measured biomarkers. <strong>Node color reflects this
+            subject's z-scores</strong> relative to the young reference. Drag nodes, zoom, and hover for details.
+            Illustrative and non-diagnostic.
+        </p>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+    <script>
+        const rawNodes = @Html.Raw(JsonSerializer.Serialize(Model.Nodes));
+        const rawEdges = @Html.Raw(JsonSerializer.Serialize(Model.Edges));
+
+        // Map our graph model onto vis-network node/edge shapes.
+        const nodes = new vis.DataSet(rawNodes.map(n => ({
+            id: n.Id,
+            label: n.Label,
+            title: n.Title,
+            group: n.Group,
+            value: n.Size,
+            color: { background: n.Color, border: '#0b234022', highlight: { background: n.Color, border: '#0b2340' } },
+            font: { color: n.Group === 'biomarker' ? '#0b2340' : '#ffffff', size: n.Group === 'domain' ? 16 : 13 }
+        })));
+
+        const edges = new vis.DataSet(rawEdges.map(e => ({ from: e.From, to: e.To })));
+
+        const options = {
+            nodes: { shape: 'dot', scaling: { min: 12, max: 40 }, borderWidth: 1.5 },
+            edges: { smooth: { enabled: true, type: 'continuous' }, color: { color: '#94a3b8', opacity: 0.6 }, width: 1.2, arrows: { to: { enabled: true, scaleFactor: 0.5 } } },
+            layout: { hierarchical: false },
+            physics: { enabled: true, stabilization: { iterations: 180 }, barnesHut: { gravitationalConstant: -6000, springLength: 150, springConstant: 0.03 } },
+            interaction: { hover: true, tooltipDelay: 120 }
+        };
+
+        new vis.Network(document.getElementById('graph'), { nodes, edges }, options);
+    </script>
+}

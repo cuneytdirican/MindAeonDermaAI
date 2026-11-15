@@ -1,0 +1,82 @@
+@using MindAeonDermaAI.Web.Models
+@model MindAeonDermaAI.Web.Controllers.GenomicsSubjectVm
+@{
+    ViewData["Title"] = "Genomics-ready";
+    var s = Model.Subject;
+}
+
+<div class="page-head">
+    <div>
+        <h1 style="margin-bottom:2px">Genomics-ready intake</h1>
+        <div class="muted">Subject @s.Code@(string.IsNullOrEmpty(s.DisplayName) ? "" : $" · {s.DisplayName}") · Research use · Non-diagnostic</div>
+    </div>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-controller="Subjects" asp-action="Details" asp-route-id="@s.Id">Back to subject</a>
+</div>
+
+<div class="alert alert-info">
+    Genomics-ready: capture gene variants, SNPs, expression and methylation markers as a staging placeholder
+    for future DNA modules. Entries are contextual research inputs only and are not used for diagnosis.
+</div>
+
+<div class="card mt-4">
+    <div class="card-h"><h3>Add marker</h3></div>
+    <div class="card-b">
+        <form asp-action="Add" asp-route-id="@s.Id" method="post">
+            <div class="grid cols-2">
+                <div class="field">
+                    <label>Omics type</label>
+                    @await Html.PartialAsync("_SmartSelect", new SmartSelectModel { FieldName = "omicsTypeId", Entity = "omicsType", Placeholder = "Select omics type" })
+                </div>
+                <div class="field">
+                    <label>Marker</label>
+                    <input class="input" type="text" name="marker" maxlength="60" placeholder="e.g. MMP1 / rs1799750" required />
+                </div>
+                <div class="field">
+                    <label>Value <span class="muted">(optional)</span></label>
+                    <input class="input" type="text" name="value" maxlength="60" placeholder="e.g. genotype / expression level" />
+                </div>
+                <div class="field">
+                    <label>Interpretation <span class="muted">(optional)</span></label>
+                    <input class="input" type="text" name="interpretation" maxlength="300" placeholder="Research note" />
+                </div>
+            </div>
+            <div class="flex gap-2 mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    Add marker
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-h"><h3>Markers <span class="muted">(@Model.Markers.Count)</span></h3></div>
+    <div class="card-b">
+        @if (Model.Markers.Count == 0)
+        {
+            <div class="empty"><p>No omics markers yet. Add the first above.</p></div>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr><th>Type</th><th>Marker</th><th>Value</th><th>Interpretation</th><th>Recorded at</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var m in Model.Markers)
+                    {
+                        <tr>
+                            <td><span class="badge badge-teal">@(m.OmicsType?.Name ?? "—")</span></td>
+                            <td>@m.Marker</td>
+                            <td>@(string.IsNullOrEmpty(m.Value) ? "—" : m.Value)</td>
+                            <td class="muted">@(string.IsNullOrEmpty(m.Interpretation) ? "—" : m.Interpretation)</td>
+                            <td class="muted">@m.RecordedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

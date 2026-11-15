@@ -1,0 +1,570 @@
+@model ReportViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Report";
+    var s = new ReportSections();
+    if (!string.IsNullOrWhiteSpace(Model.Document?.SectionsJson))
+    {
+        try { s = JsonSerializer.Deserialize<ReportSections>(Model.Document!.SectionsJson,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new(); }
+        catch { }
+    }
+    var isDemo = Model.Subject.Code == "DEMO-0001";
+    var panelLabels = Model.PanelNeeds.Select(p => p.Panel).ToList();
+    var panelValues = Model.PanelNeeds.Select(p => p.NeedScore).ToList();
+    var bioLabels = Model.Biomarkers.Where(b => b.ZScore.HasValue).Select(b => b.Name).ToList();
+    var bioZ = Model.Biomarkers.Where(b => b.ZScore.HasValue).Select(b => b.ZScore!.Value).ToList();
+}
+
+<div class="page-head">
+    <div>
+        <h1 style="margin-bottom:2px">Personalized Skin-Biology Report</h1>
+        <div class="muted">Subject @Model.Subject.Code · Assessment #@Model.Assessment.Id · @Model.Assessment.AssessmentDate.ToString("yyyy-MM-dd") · Research use</div>
+    </div>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-action="Details" asp-route-id="@Model.Assessment.Id">Back</a>
+    <a class="btn btn-dark" asp-action="DigitalTwin" asp-route-id="@Model.Assessment.Id">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg> Digital Twin
+    </a>
+    <a class="btn btn-primary" asp-action="Pdf" asp-route-id="@Model.Assessment.Id" target="_blank">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+        Download PDF
+    </a>
+</div>
+
+<div class="flex gap-2 mb-3" style="flex-wrap:wrap">
+    <a class="btn btn-ghost btn-sm" asp-action="Simulate" asp-route-id="@Model.Assessment.Id">Treatment simulation</a>
+    <a class="btn btn-ghost btn-sm" asp-controller="KnowledgeGraph" asp-action="Index" asp-route-id="@Model.Assessment.Id">Knowledge graph</a>
+    <a class="btn btn-ghost btn-sm" asp-controller="Recommendation" asp-action="Index" asp-route-id="@Model.Assessment.Id">Recommendations</a>
+    <a class="btn btn-ghost btn-sm" asp-controller="Recommendation" asp-action="Ingredients" asp-route-id="@Model.Assessment.Id">INCI check</a>
+    <a class="btn btn-ghost btn-sm" asp-controller="Timeline" asp-action="Subject" asp-route-id="@Model.Subject.Id">Progress timeline</a>
+    <a class="btn btn-dark btn-sm" asp-controller="Assistant" asp-action="Index" asp-route-assessmentId="@Model.Assessment.Id" asp-route-q="Explain this assessment for a clinician, grounded in the data.">Explain (clinician)</a>
+    <a class="btn btn-dark btn-sm" asp-controller="Assistant" asp-action="Index" asp-route-assessmentId="@Model.Assessment.Id" asp-route-mode="patient" asp-route-q="Explain my skin results in simple, friendly terms.">Explain (patient)</a>
+</div>
+
+@if (isDemo || Model.Document?.UsedSyntheticData == true)
+{
+    <div class="alert alert-info">
+        <strong>Synthetic demonstration.</strong> This report uses literature-inspired simulated data created for demonstration and model prototyping only. It is not a validated clinical output.
+    </div>
+}
+
+<!-- Hero score banner -->
+<div class="card mb-3" style="overflow:hidden">
+    <div style="background:linear-gradient(120deg,var(--navy-800),var(--navy-900));color:#fff;padding:26px;display:grid;grid-template-columns:auto 1fr auto;gap:26px;align-items:center">
+        <div style="text-align:center">
+            <div style="font-size:12px;color:#9fb3cc;text-transform:uppercase;letter-spacing:.08em">Integrated skin-quality</div>
+            <div style="font-size:52px;font-weight:800;line-height:1">@Model.Score.IntegratedSkinQualityScore.ToString("0")<span style="font-size:20px;color:#9fb3cc">/100</span></div>
+        </div>
+        <div>
+            <div style="font-size:12px;color:#9fb3cc;text-transform:uppercase;letter-spacing:.08em">Selected panel</div>
+            <div style="font-size:20px;font-weight:700">@Model.SelectedPanel?.Name</div>
+            <div style="margin-top:8px;font-size:12px;color:#9fb3cc;text-transform:uppercase;letter-spacing:.08em">Primary phenotype</div>
+            <div style="font-size:16px;font-weight:600;color:var(--teal-400)">@Model.PrimaryPhenotypeName</div>
+        </div>
+        <div style="display:flex;gap:22px">
+            <div style="text-align:center"><div style="font-size:26px;font-weight:800">@Model.Score.PanelScore.ToString("0")</div><div style="font-size:11px;color:#9fb3cc">Panel</div></div>
+            <div style="text-align:center"><div style="font-size:26px;font-weight:800">@Model.Score.ImageQualityScore.ToString("0")</div><div style="font-size:11px;color:#9fb3cc">Image</div></div>
+            <div style="text-align:center"><div style="font-size:26px;font-weight:800">@Model.Score.LifestyleScore.ToString("0")</div><div style="font-size:11px;color:#9fb3cc">Lifestyle</div></div>
+        </div>
+    </div>
+</div>
+
+@{ var scA = Model.Score; }
+<!-- Biological age, confidence & benchmark -->
+<div class="grid cols-3 mb-3">
+    <div class="card"><div class="card-h"><h3>Biological skin age</h3><span class="badge badge-muted">Illustrative</span></div>
+        <div class="card-b">
+            <div class="flex gap-3 items-center">
+                <div style="text-align:center"><div class="muted" style="font-size:11px">Chronological</div><div class="score-big" style="font-size:30px">@(Model.Subject.Age?.ToString() ?? "—")</div></div>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--teal-500)" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                <div style="text-align:center"><div class="muted" style="font-size:11px">Biological</div><div class="score-big" style="font-size:30px;color:@(scA.BiologicalSkinAge <= (Model.Subject.Age ?? 200) ? "var(--ok)" : "var(--danger)")">@(scA.BiologicalSkinAge?.ToString("0") ?? "—")</div></div>
+            </div>
+            <div class="tag-list mt-3">
+                <span class="chip">Face @(scA.FaceAge?.ToString("0") ?? "—")</span>
+                <span class="chip">Protein @(scA.ProteinAge?.ToString("0") ?? "—")</span>
+                <span class="chip">Barrier @(scA.BarrierAge?.ToString("0") ?? "—")</span>
+                <span class="chip">Collagen @(scA.CollagenAge?.ToString("0") ?? "—")</span>
+            </div>
+        </div>
+    </div>
+    <div class="card"><div class="card-h"><h3>Confidence</h3></div>
+        <div class="card-b">
+            @{ (string, double?)[] conf = { ("Protein analysis", scA.ProteinConfidence), ("Image analysis", scA.ImageConfidence), ("Overall", scA.OverallConfidence) }; }
+            @foreach (var (label, val) in conf)
+            {
+                <div class="mb-2">
+                    <div class="flex between mb-2"><span style="font-weight:600">@label</span><span class="muted">@(val?.ToString("0") ?? "—")%</span></div>
+                    <div class="meter"><span style="width:@(val ?? 0)%"></span></div>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="card"><div class="card-h"><h3>Peer benchmark</h3><span class="badge badge-warn">Synthetic</span></div>
+        <div class="card-b">
+            @if (scA.BenchmarkPercentile.HasValue)
+            {
+                <div class="score-big" style="font-size:30px">@scA.BenchmarkPercentile.Value.ToString("0")<span style="font-size:14px;color:var(--muted)">th</span></div>
+                <div class="muted mb-2" style="font-size:13px">percentile among <strong>@scA.BenchmarkGroupLabel</strong></div>
+                <div class="meter"><span style="width:@scA.BenchmarkPercentile%"></span></div>
+                <p class="hint mt-2">Biological quality vs an age-matched synthetic peer group (illustrative).</p>
+            }
+            else { <p class="muted">Not enough data for a matched benchmark.</p> }
+        </div>
+    </div>
+</div>
+
+<!-- Subject profile / personal data -->
+@{
+    var subj = Model.Subject;
+    (string, string)[] profile =
+    {
+        ("Age", subj.Age?.ToString() ?? "—"),
+        ("Sex", subj.Sex?.Name ?? "—"),
+        ("BMI", subj.Bmi?.ToString("0.0") ?? "—"),
+        ("Height / Weight", $"{(subj.HeightCm?.ToString("0") ?? "—")} cm / {(subj.WeightKg?.ToString("0") ?? "—")} kg"),
+        ("Skin type", subj.SkinType?.Name ?? "—"),
+        ("Fitzpatrick", subj.FitzpatrickType?.Name ?? "—"),
+        ("Menopause", subj.MenopauseStatus?.Name ?? "—"),
+        ("Smoking", subj.SmokingStatus?.Name ?? "—"),
+        ("Alcohol", subj.AlcoholUse?.Name ?? "—"),
+        ("Sleep", subj.SleepQuality?.Name ?? "—"),
+        ("Stress", subj.StressLevel?.Name ?? "—"),
+        ("UV exposure", subj.UVExposureLevel?.Name ?? "—"),
+        ("Intervention", Model.Assessment.InterventionCategory?.Name ?? "—"),
+        ("Timepoint", Model.Assessment.TimePoint.ToString()),
+    };
+}
+<div class="card mb-3">
+    <div class="card-h"><h3>Subject profile</h3><span class="badge badge-muted">Interpret together with the findings below</span></div>
+    <div class="card-b">
+        <div class="grid cols-4">
+            @foreach (var (k, v) in profile)
+            {
+                <div>
+                    <div class="muted" style="font-size:11.5px;text-transform:uppercase;letter-spacing:.04em">@k</div>
+                    <div style="font-weight:600;color:var(--navy-800)">@v</div>
+                </div>
+            }
+        </div>
+        @if (Model.PhenotypeNames.Count > 0)
+        {
+            <div class="mt-3">
+                <div class="muted mb-2" style="font-size:11.5px;text-transform:uppercase;letter-spacing:.04em">Biological phenotype classification</div>
+                <div class="tag-list">
+                    @foreach (var (name, i) in Model.PhenotypeNames.Select((n, i) => (n, i)))
+                    {
+                        <span class="chip" style="@(i == 0 ? "background:var(--teal-50);color:var(--teal-600)" : "")">@name@(i == 0 ? " · primary" : "")</span>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Executive + personalized -->
+<div class="grid cols-2 mb-3">
+    <div class="card"><div class="card-h"><h3>Executive summary</h3></div><div class="card-b"><p class="mt-0">@s.ExecutiveSummary</p></div></div>
+    <div class="card" style="border-color:var(--teal-500)"><div class="card-h"><h3>For you</h3><span class="badge badge-teal">Personalized</span></div><div class="card-b"><p class="mt-0">@s.PersonalizedInterpretation</p></div></div>
+</div>
+
+<!-- Panel selection + charts -->
+<div class="grid cols-2 mb-3">
+    <div class="card"><div class="card-h"><h3>Panel selection — biological need</h3></div>
+        <div class="card-b">
+            <canvas id="panelChart" height="220"></canvas>
+            <div class="mt-3">
+                @foreach (var p in Model.PanelNeeds)
+                {
+                    <div class="mb-2">
+                        <div class="flex between mb-2"><span style="font-weight:600">@p.Panel @(p.Selected ? "· selected" : "")</span><span class="muted">@p.NeedScore.ToString("0.0")</span></div>
+                        <div class="meter @(p.NeedScore >= 55 ? "need-hi" : "")"><span style="width:@(Math.Min(100, p.NeedScore))%"></span></div>
+                    </div>
+                }
+            </div>
+            <p class="hint">@s.PanelSelectionNote</p>
+        </div>
+    </div>
+    <div class="card"><div class="card-h"><h3>Protein biomarkers — z vs young reference</h3></div>
+        <div class="card-b"><canvas id="bioChart" height="220"></canvas>
+            <p class="hint mt-3">@s.ProteinAnalysisNote</p>
+        </div>
+    </div>
+</div>
+
+<!-- Biomarker table -->
+<div class="card mb-3"><div class="card-h"><h3>Protein biomarker analysis</h3></div>
+    <div class="card-b" style="padding:0">
+        <table class="table">
+            <thead><tr><th>Biomarker</th><th>Domain</th><th class="num">Value</th><th class="num">z</th><th class="num">Δ%</th><th>Interpretation</th></tr></thead>
+            <tbody>
+            @foreach (var b in Model.Biomarkers)
+            {
+                <tr>
+                    <td><strong>@b.Name</strong></td>
+                    <td class="muted">@b.Domain</td>
+                    <td class="num">@(b.Value?.ToString("0.#") ?? "—") <span class="muted" style="font-size:11px">@b.Unit</span></td>
+                    <td class="num">@(b.ZScore?.ToString("0.0") ?? "—")</td>
+                    <td class="num">@(b.PercentChange.HasValue ? b.PercentChange.Value.ToString("+0.#;-0.#") + "%" : "—")</td>
+                    <td class="muted">@b.Interpretation</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@{
+    // Explainability: rank biomarkers by how much they push toward biological need.
+    double Drive(ReportViewModel.BiomarkerRow b)
+    {
+        if (!b.ZScore.HasValue) return 0;
+        double z = b.ZScore.Value;
+        if (b.Direction.Contains("Lower")) return Math.Max(0, -z);
+        if (b.Direction.Contains("Higher")) return Math.Max(0, z);
+        return Math.Max(0, Math.Abs(z) - 0.5);
+    }
+    var drivers = Model.Biomarkers.Select(b => new { b, d = Drive(b) }).Where(x => x.d > 0.4)
+        .OrderByDescending(x => x.d).Take(3).Select(x => x.b).ToList();
+    var selNeed = Model.PanelNeeds.FirstOrDefault(p => p.Selected);
+    var imgConfirm = Model.ImageScores.OrderBy(i => i.Score ?? 100).FirstOrDefault(i => i.Score.HasValue);
+}
+@if (drivers.Count > 0)
+{
+    <div class="card mb-3"><div class="card-h"><h3>Why this result — explainable AI</h3><span class="badge badge-navy">Traceable</span></div>
+        <div class="card-b">
+            <div class="flex items-center gap-2" style="flex-wrap:wrap">
+                <span class="chip" style="background:var(--navy-800);color:#fff">@(selNeed?.Panel ?? "Selected panel") · need @(selNeed?.NeedScore.ToString("0") ?? "—")</span>
+                <span class="muted">→</span>
+                @foreach (var d in drivers)
+                {
+                    <span class="chip" style="background:#fef2f2;color:var(--danger)">@d.Name z=@d.ZScore?.ToString("0.0")</span>
+                }
+                <span class="muted">→</span>
+                @if (imgConfirm is not null)
+                {
+                    <span class="chip" style="background:var(--teal-50);color:var(--teal-600)">Image: @imgConfirm.Metric @imgConfirm.Score?.ToString("0")</span>
+                    <span class="muted">→</span>
+                }
+                <span class="chip" style="background:#ecfdf5;color:var(--ok)">Confidence @(Model.Score.OverallConfidence?.ToString("0") ?? "—")%</span>
+            </div>
+            <p class="hint mt-3">
+                The <strong>@(selNeed?.Panel)</strong> was prioritized mainly because
+                @string.Join(", ", drivers.Select(d => $"{d.Name} is {d.Interpretation.ToLowerInvariant()}"))@(imgConfirm is not null ? $", and the image ({imgConfirm.Metric.ToLowerInvariant()} {imgConfirm.Score:0}) is consistent" : "").
+                Cross-modal concordance @Model.Score.CrossModalConcordance.ToString("0")/100.
+            </p>
+        </div>
+    </div>
+}
+
+@if (Model.ImageScores.Count > 0)
+{
+    <div class="card mb-3"><div class="card-h"><h3>Image-based skin assessment</h3></div>
+        <div class="card-b">
+            <div class="grid cols-3">
+                @foreach (var im in Model.ImageScores)
+                {
+                    <div class="mb-2">
+                        <div class="flex between mb-2"><span style="font-weight:600">@im.Metric</span><span class="muted">@(im.Score?.ToString("0") ?? "—")</span></div>
+                        <div class="meter"><span style="width:@(im.Score ?? 0)%"></span></div>
+                    </div>
+                }
+            </div>
+            <p class="hint mt-3">@s.ImageAssessmentNote</p>
+        </div>
+    </div>
+}
+
+@{
+    string Heat(double? s) { if (s is null) return "#e6eaf0"; var v = Math.Clamp(s.Value, 0, 100); return $"hsl({(int)(v * 1.2)} 62% 52%)"; }
+    double? ZO(string n) => Model.Zones.FirstOrDefault(z => z.Zone == n)?.Overall;
+    var sc = Model.Score;
+}
+
+<!-- ADVANCED MULTIMODAL INTELLIGENCE -->
+<div class="grid cols-4 mb-3">
+    <div class="card"><div class="card-b">
+        <div class="l muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">Cross-modal concordance</div>
+        <div class="score-big" style="font-size:30px">@sc.CrossModalConcordance.ToString("0")<span style="font-size:13px;color:var(--muted)">/100</span></div>
+        <div class="meter mt-2"><span style="width:@sc.CrossModalConcordance%"></span></div>
+        <div class="hint">Agreement between image &amp; protein signals</div>
+    </div></div>
+    <div class="card"><div class="card-b">
+        <div class="l muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">Molecular status</div>
+        @if (sc.IsSubclinical)
+        {
+            <div><span class="badge badge-warn">Subclinical signal</span></div>
+            <div class="hint mt-2">Molecular change ahead of visible signs</div>
+        }
+        else
+        {
+            <div><span class="badge badge-ok">Image ↔ molecular aligned</span></div>
+            <div class="hint mt-2">No molecular-ahead-of-visible pattern</div>
+        }
+    </div></div>
+    <div class="card"><div class="card-b">
+        <div class="l muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">Aging velocity</div>
+        @if (sc.AgingVelocity.HasValue)
+        {
+            var worsening = sc.AgingVelocity.Value > 0;
+            <div class="score-big" style="font-size:26px;color:@(worsening ? "var(--danger)" : "var(--ok)")">@sc.AgingVelocity.Value.ToString("+0.0;-0.0")</div>
+            <div class="hint">pts / 30 days · @(worsening ? "declining" : "improving") vs baseline</div>
+        }
+        else
+        {
+            <div style="font-size:16px;font-weight:700;color:var(--navy-800)">Baseline</div>
+            <div class="hint">No prior timepoint to compare</div>
+        }
+    </div></div>
+    <div class="card"><div class="card-b">
+        <div class="l muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">Exposome burden</div>
+        @if (sc.ExposomeBurden.HasValue)
+        {
+            <div class="score-big" style="font-size:26px">@sc.ExposomeBurden.Value.ToString("0")<span style="font-size:12px;color:var(--muted)">/100</span></div>
+            <div class="hint">UV @(Model.Assessment.ExposomeUvIndex?.ToString("0.#") ?? "—") · PM2.5 @(Model.Assessment.ExposomePm25?.ToString("0") ?? "—") · RH @(Model.Assessment.ExposomeHumidity?.ToString("0") ?? "—")%</div>
+        }
+        else
+        {
+            <div style="font-size:16px;font-weight:700;color:var(--navy-800)">—</div>
+            <div class="hint">No exposome context provided</div>
+        }
+    </div></div>
+</div>
+
+<!-- MECHANISTIC INDICES + PATHWAY MAP -->
+<div class="grid cols-2 mb-3">
+    <div class="card"><div class="card-h"><h3>Mechanistic pathway indices</h3><span class="badge badge-navy">Higher = healthier balance</span></div>
+        <div class="card-b">
+            @{
+                (string, double?)[] idx = { ("Remodeling balance (MMP-1 / TIMP-1)", sc.RemodelingBalanceIndex), ("Hyaluronan axis (HAS2 × CD44)", sc.HyaluronanAxisIndex), ("Barrier resilience (FLG·LOR vs IL-1α)", sc.BarrierResilienceIndex) };
+            }
+            @foreach (var (name, val) in idx)
+            {
+                <div class="mb-3">
+                    <div class="flex between mb-2"><span style="font-weight:600">@name</span><span class="muted">@(val?.ToString("0") ?? "—")</span></div>
+                    <div class="meter"><span style="width:@(val ?? 0)%;background:@Heat(val)"></span></div>
+                </div>
+            }
+            <p class="hint">Derived indices summarize opposing biomarker pairs into interpretable balance scores rather than isolated values.</p>
+        </div>
+    </div>
+    <div class="card"><div class="card-h"><h3>Mechanism map</h3></div>
+        <div class="card-b" style="text-align:center">
+            <svg width="100%" viewBox="0 0 420 220" style="max-width:420px">
+                <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#94a3b8"/></marker></defs>
+                <g font-family="Inter,sans-serif" font-size="11" text-anchor="middle">
+                    @{ string Nd(double? v) => Heat(v); }
+                    <!-- Collagen axis -->
+                    <circle cx="80" cy="60" r="30" fill="@Nd(sc.RemodelingBalanceIndex)"/><text x="80" y="60" fill="#fff" font-weight="700">MMP1</text><text x="80" y="74" fill="#fff" font-size="9">/TIMP1</text>
+                    <text x="80" y="108" fill="#0b2340" font-weight="600">Remodeling</text>
+                    <!-- Hyaluronan axis -->
+                    <circle cx="210" cy="60" r="30" fill="@Nd(sc.HyaluronanAxisIndex)"/><text x="210" y="60" fill="#fff" font-weight="700">HAS2</text><text x="210" y="74" fill="#fff" font-size="9">×CD44</text>
+                    <text x="210" y="108" fill="#0b2340" font-weight="600">Hydration</text>
+                    <!-- Barrier axis -->
+                    <circle cx="340" cy="60" r="30" fill="@Nd(sc.BarrierResilienceIndex)"/><text x="340" y="58" fill="#fff" font-weight="700">FLG·LOR</text><text x="340" y="72" fill="#fff" font-size="9">vs IL-1α</text>
+                    <text x="340" y="108" fill="#0b2340" font-weight="600">Barrier</text>
+                    <!-- ECM integration node -->
+                    <rect x="150" y="150" width="120" height="44" rx="12" fill="#0b2340"/><text x="210" y="170" fill="#fff" font-weight="700">Dermal ECM</text><text x="210" y="185" fill="#9fb3cc" font-size="9">integrity &amp; support</text>
+                    <line x1="80" y1="90" x2="180" y2="150" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>
+                    <line x1="210" y1="90" x2="210" y2="150" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>
+                    <line x1="340" y1="90" x2="240" y2="150" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#ah)"/>
+                </g>
+            </svg>
+            <p class="hint">Node color reflects each axis's balance (green healthy → red high-need).</p>
+        </div>
+    </div>
+</div>
+
+@if (Model.Zones.Count > 0)
+{
+    <!-- REGIONAL ZONE HEATMAP -->
+    <div class="card mb-3"><div class="card-h"><h3>Regional skin-quality heatmap</h3><span class="badge badge-muted">Aging is spatially heterogeneous</span></div>
+        <div class="card-b">
+            <div class="grid cols-2" style="align-items:center">
+                <div style="text-align:center">
+                    <svg width="100%" viewBox="0 0 240 300" style="max-width:240px">
+                        <ellipse cx="120" cy="150" rx="82" ry="115" fill="#f1f5f9" stroke="#e6eaf0"/>
+                        <path d="M60 70 Q120 40 180 70 Q182 95 120 100 Q58 95 60 70Z" fill="@Heat(ZO("Forehead"))" opacity="0.9"/>
+                        <ellipse cx="88" cy="120" rx="24" ry="15" fill="@Heat(ZO("Periorbital"))"/>
+                        <ellipse cx="152" cy="120" rx="24" ry="15" fill="@Heat(ZO("Periorbital"))"/>
+                        <ellipse cx="120" cy="150" rx="18" ry="34" fill="@Heat(ZO("Nose / T-zone"))"/>
+                        <ellipse cx="76" cy="168" rx="26" ry="30" fill="@Heat(ZO("Left cheek"))"/>
+                        <ellipse cx="164" cy="168" rx="26" ry="30" fill="@Heat(ZO("Right cheek"))"/>
+                        <ellipse cx="120" cy="212" rx="34" ry="20" fill="@Heat(ZO("Perioral"))"/>
+                        <ellipse cx="120" cy="250" rx="26" ry="18" fill="@Heat(ZO("Chin"))"/>
+                    </svg>
+                    <div class="flex gap-2" style="justify-content:center;font-size:11px;color:var(--muted);margin-top:6px">
+                        <span>0</span><span style="width:120px;height:8px;border-radius:6px;background:linear-gradient(90deg,hsl(0 62% 52%),hsl(60 62% 52%),hsl(120 62% 52%))"></span><span>100</span>
+                    </div>
+                </div>
+                <div>
+                    <table class="table">
+                        <thead><tr><th>Zone</th><th class="num">Overall</th><th class="num">Wrinkle</th><th class="num">Redness</th><th class="num">Hydration</th></tr></thead>
+                        <tbody>
+                        @foreach (var z in Model.Zones)
+                        {
+                            <tr>
+                                <td><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:@Heat(z.Overall);margin-right:6px"></span>@z.Zone</td>
+                                <td class="num">@(z.Overall?.ToString("0") ?? "—")</td>
+                                <td class="num">@(z.Wrinkle?.ToString("0") ?? "—")</td>
+                                <td class="num">@(z.RednessHealth?.ToString("0") ?? "—")</td>
+                                <td class="num">@(z.Hydration?.ToString("0") ?? "—")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (Model.FacialGeometry is { } fg)
+{
+    <div class="card mb-3"><div class="card-h"><h3>Facial geometry &amp; symmetry</h3><span class="badge badge-muted">Landmark-based</span></div>
+        <div class="card-b">
+            <div class="grid cols-4">
+                @{ (string, string)[] geo = { ("Symmetry", fg.SymmetryScore?.ToString("0") ?? "—"), ("Thirds balance", fg.ThirdsBalance?.ToString("0") ?? "—"), ("Fifths balance", fg.FifthsBalance?.ToString("0") ?? "—"), ("Jawline angle", (fg.JawlineAngle?.ToString("0") ?? "—") + "°") }; }
+                @foreach (var (k, v) in geo)
+                {
+                    <div><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em">@k</div><div class="score-big" style="font-size:26px">@v</div></div>
+                }
+            </div>
+            <p class="hint mt-2">Derived from in-browser facial landmarks (MediaPipe). Capture quality @(fg.ImageQualityPercent?.ToString("0") ?? "—")%. Illustrative and non-diagnostic.</p>
+        </div>
+    </div>
+}
+
+<!-- RESPONSE LIKELIHOOD + COUNTERFACTUAL -->
+<div class="grid cols-2 mb-3">
+    @if (Model.ResponseLikelihood.Count > 0)
+    {
+        <div class="card"><div class="card-h"><h3>Intervention-response likelihood</h3><span class="badge badge-teal">Biological fit</span></div>
+            <div class="card-b">
+                <p class="muted mt-0" style="font-size:12.5px">Estimated biological fit of each intervention category (non-diagnostic; not a treatment recommendation).</p>
+                @foreach (var r in Model.ResponseLikelihood.Take(6))
+                {
+                    <div class="mb-2">
+                        <div class="flex between mb-2"><span style="font-weight:600">@r.Category</span><span class="muted">@r.Likelihood.ToString("0")%</span></div>
+                        <div class="meter"><span style="width:@r.Likelihood%"></span></div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    <div class="card"><div class="card-h"><h3>Counterfactual &amp; what-if</h3><span class="badge badge-navy">Explainable AI</span></div>
+        <div class="card-b">
+            @if (sc.CounterfactualScore.HasValue)
+            {
+                <div class="flex gap-3 items-center mb-3">
+                    <div><div class="muted" style="font-size:11px">Current</div><div class="score-big" style="font-size:26px">@sc.IntegratedSkinQualityScore.ToString("0")</div></div>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--teal-500)" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    <div><div class="muted" style="font-size:11px">Projected</div><div class="score-big" style="font-size:26px;color:var(--teal-600)">@sc.CounterfactualScore.Value.ToString("0")</div></div>
+                </div>
+                <p class="mt-0">@sc.CounterfactualNote</p>
+            }
+            else
+            {
+                <p class="muted mt-0">No single dominant marker was identified for a counterfactual projection.</p>
+            }
+            @if (Model.Instruments.Count > 0)
+            {
+                <div class="mt-3" style="border-top:1px solid var(--line);padding-top:12px">
+                    <div class="muted mb-2" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">Instrumental / multi-omics readings</div>
+                    <div class="tag-list">
+                        @foreach (var ins in Model.Instruments) { <span class="chip">@ins.Name: @ins.Value.ToString("0.##")</span> }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (Model.Projections.Count > 0)
+{
+    <div class="card mb-3"><div class="card-h"><h3>Digital-twin — 12-week what-if projection</h3><span class="badge badge-teal">Illustrative</span></div>
+        <div class="card-b">
+            <canvas id="projChart" height="110"></canvas>
+            <p class="hint mt-3">Projected integrated skin-quality score over 12 weeks under each leading intervention category, scaled by biological response likelihood and saturating toward a realistic ceiling. Illustrative and non-diagnostic — not a guarantee of outcome.</p>
+        </div>
+    </div>
+}
+
+<!-- Narrative sections -->
+<div class="grid cols-2 mb-3">
+    <div class="card"><div class="card-h"><h3>Mathematical model</h3></div><div class="card-b">
+        <p class="mt-0">@s.ModelExplanation</p>
+        <div class="tag-list mt-2">
+            <span class="chip">@Model.Score.ModelUsed</span>
+            <span class="chip">Confidence: @Model.Score.Confidence</span>
+            <span class="chip">@(Model.Score.UsedSyntheticCohort ? "Synthetic reference" : "Real cohort")</span>
+        </div>
+    </div></div>
+    <div class="card"><div class="card-h"><h3>Pathway-level interpretation</h3></div><div class="card-b"><p class="mt-0">@s.PathwayInterpretation</p></div></div>
+</div>
+
+<div class="grid cols-2 mb-3">
+    <div class="card"><div class="card-h"><h3>Cohort comparison</h3>@if (Model.Score.UsedSyntheticCohort) { <span class="badge badge-warn">Synthetic</span> }</div><div class="card-b">
+        @if (Model.Score.CohortPercentileScore.HasValue)
+        {
+            <div class="flex between mb-2"><span style="font-weight:600">Reference percentile (n=@Model.Score.CohortSize)</span><span class="muted">@Model.Score.CohortPercentileScore.Value.ToString("0")th</span></div>
+            <div class="meter"><span style="width:@(Model.Score.CohortPercentileScore.Value)%"></span></div>
+            <p class="hint mt-2">Biological quality ranks at approximately the @Model.Score.CohortPercentileScore.Value.ToString("0")th percentile of a literature-inspired synthetic cohort spanning young to aged profiles.</p>
+        }
+        <p class="mt-0">@s.CohortNote</p>
+    </div></div>
+    <div class="card"><div class="card-h"><h3>Reasoning summary</h3></div><div class="card-b"><p class="mt-0">@s.ReasoningSummary</p></div></div>
+</div>
+
+<div class="card mb-3"><div class="card-h"><h3>Limitations</h3></div><div class="card-b">
+    <p class="mt-0">@s.Limitations</p>
+    <div class="disclaimer">@ReportViewModel.Disclaimer</div>
+</div></div>
+
+@if (Model.Document?.GeneratedByModel is { } genModel)
+{
+    <p class="muted" style="font-size:12px">Narrative generated by @Model.Document.GeneratedByProvider · @genModel. Deterministic scores computed by the MindAeon analysis engine.</p>
+}
+else
+{
+    <p class="muted" style="font-size:12px">Narrative produced by the deterministic fallback writer (no AI provider configured). Scores computed by the MindAeon analysis engine.</p>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        const panelLabels = @Html.Raw(JsonSerializer.Serialize(panelLabels));
+        const panelValues = @Html.Raw(JsonSerializer.Serialize(panelValues));
+        const bioLabels = @Html.Raw(JsonSerializer.Serialize(bioLabels));
+        const bioZ = @Html.Raw(JsonSerializer.Serialize(bioZ));
+
+        new Chart(document.getElementById('panelChart'), {
+            type: 'radar',
+            data: { labels: panelLabels, datasets: [{ label: 'Need score', data: panelValues,
+                backgroundColor: 'rgba(18,165,148,.18)', borderColor: '#0b7285', borderWidth: 2, pointBackgroundColor: '#0b7285' }] },
+            options: { scales: { r: { suggestedMin: 0, suggestedMax: 100, ticks: { stepSize: 25 } } },
+                plugins: { legend: { display: false } } }
+        });
+
+        new Chart(document.getElementById('bioChart'), {
+            type: 'bar',
+            data: { labels: bioLabels, datasets: [{ label: 'z-score', data: bioZ,
+                backgroundColor: bioZ.map(v => v < 0 ? 'rgba(220,38,38,.75)' : 'rgba(18,165,148,.8)') }] },
+            options: { indexAxis: 'y', plugins: { legend: { display: false } },
+                scales: { x: { suggestedMin: -3, suggestedMax: 3, grid: { color: '#eef2f7' } } } }
+        });
+
+        const projLabels = @Html.Raw(JsonSerializer.Serialize(Enumerable.Range(0, 13).Select(w => "W" + w)));
+        const projSeries = @Html.Raw(JsonSerializer.Serialize(Model.Projections.Select(p => new { p.Category, p.Weekly })));
+        if (document.getElementById('projChart') && projSeries.length) {
+            const palette = ['#0b7285', '#12a594', '#f59e0b', '#6366f1'];
+            new Chart(document.getElementById('projChart'), {
+                type: 'line',
+                data: { labels: projLabels, datasets: projSeries.map((s, i) => ({ label: s.Category, data: s.Weekly, borderColor: palette[i % palette.length], backgroundColor: 'transparent', tension: .35, pointRadius: 2, borderWidth: 2.4 })) },
+                options: { plugins: { legend: { position: 'bottom' } }, animation: { duration: 1200 },
+                    scales: { y: { suggestedMin: Math.max(0, projSeries[0].Weekly[0] - 6), suggestedMax: 100, title: { display: true, text: 'Integrated score' } },
+                              x: { title: { display: true, text: 'Weeks' } } } }
+            });
+        }
+    </script>
+}

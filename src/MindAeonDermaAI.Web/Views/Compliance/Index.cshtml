@@ -1,0 +1,62 @@
+@model MindAeonDermaAI.Web.Controllers.ComplianceController.ComplianceVm
+@{
+    ViewData["Title"] = "Security & compliance";
+}
+<div class="page-head">
+    <h1>Security &amp; compliance</h1>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-controller="Audit" asp-action="Index">Audit log</a>
+</div>
+
+<div class="grid cols-4 mb-3">
+    <div class="card"><div class="card-b"><div class="kpi"><div class="v">@Model.Subjects</div><div class="l">Subjects</div></div></div></div>
+    <div class="card"><div class="card-b"><div class="kpi"><div class="v">@Model.Consented</div><div class="l">Consented</div></div></div></div>
+    <div class="card"><div class="card-b"><div class="kpi"><div class="v">@Model.Anonymized</div><div class="l">Pseudonymized</div></div></div></div>
+    <div class="card"><div class="card-b"><div class="kpi"><div class="v">@Model.AuditEntries</div><div class="l">Audit entries</div></div></div></div>
+</div>
+
+<div class="grid cols-2 mb-3">
+    <div class="card"><div class="card-h"><h3>Posture</h3></div><div class="card-b">
+        <div class="tag-list">
+            <span class="chip">🔒 API keys encrypted at rest (Data Protection)</span>
+            <span class="chip">🔑 Role-based access (Admin / Clinician / Reviewer)</span>
+            <span class="chip">🧾 Immutable audit trail + AI-call traceability</span>
+            <span class="chip">🕵 Pseudonymization / anonymization</span>
+            <span class="chip">✅ Consent management</span>
+            <span class="chip">🏥 On-premise data residency (your MS SQL)</span>
+            <span class="chip">🩺 Non-diagnostic by design</span>
+            <span class="chip">🔐 HTTPS transport</span>
+        </div>
+        <p class="hint mt-3">Encryption in transit (HTTPS) and at rest for secrets is enabled. Data stays on your infrastructure (Windows IIS + MS SQL). This overview supports research/health-data governance discussions; it is not a certification.</p>
+    </div></div>
+    <div class="card"><div class="card-h"><h3>Data residency &amp; backup</h3></div><div class="card-b">
+        <ul class="mk-list" style="margin-top:0">
+            <li>All records persist in your organization's MS SQL Server (region of your choosing).</li>
+            <li>Provider API keys are encrypted; no subject PII is sent to AI providers beyond what a request requires.</li>
+            <li>Back up the database and the <code>App_Data/keys</code> Data-Protection folder together for disaster recovery.</li>
+        </ul>
+    </div></div>
+</div>
+
+<div class="card"><div class="card-h"><h3>Consent &amp; pseudonymization</h3></div>
+    <div class="card-b" style="padding:0">
+        <table class="table">
+            <thead><tr><th>Subject</th><th>Consent</th><th>Recorded</th><th>Privacy</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var r in Model.Rows)
+            {
+                <tr>
+                    <td><strong>@r.Code</strong> @(r.Anonymized ? "" : r.Name)</td>
+                    <td>@if (r.ConsentGiven) { <span class="badge badge-ok">Consented</span> } else { <span class="badge badge-warn">No consent</span> }</td>
+                    <td class="muted">@(r.ConsentAtUtc?.ToString("yyyy-MM-dd") ?? "—")</td>
+                    <td>@if (r.Anonymized) { <span class="badge badge-navy">Pseudonymized</span> } else { <span class="badge badge-muted">Identifiable</span> }</td>
+                    <td class="flex gap-2">
+                        <form asp-action="SetConsent" method="post"><input type="hidden" name="subjectId" value="@r.Id" /><input type="hidden" name="given" value="@((!r.ConsentGiven).ToString().ToLower())" /><button class="btn btn-ghost btn-sm" type="submit">@(r.ConsentGiven ? "Withdraw" : "Record") consent</button></form>
+                        <form asp-action="ToggleAnonymize" method="post"><input type="hidden" name="subjectId" value="@r.Id" /><button class="btn btn-ghost btn-sm" type="submit">@(r.Anonymized ? "De-anonymize" : "Anonymize")</button></form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

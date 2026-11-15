@@ -1,0 +1,40 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Sign in";
+    Layout = "_AuthLayout";
+}
+<a asp-controller="Landing" asp-action="Index" class="muted" style="font-size:13px;display:inline-flex;align-items:center;gap:6px;margin-bottom:14px">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 12H5M11 6l-6 6 6 6"/></svg> Back to site
+</a>
+<h2 style="font-size:24px;margin-bottom:4px">Welcome back</h2>
+<p class="muted mb-3">Sign in to your MindAeon Dermalytics™ workspace.</p>
+
+<form asp-action="Login" method="post">
+    <input type="hidden" asp-for="ReturnUrl" />
+    <div asp-validation-summary="ModelOnly" class="alert alert-err" style="@(ViewData.ModelState.ErrorCount == 0 ? "display:none" : "")"></div>
+
+    <div class="field">
+        <label asp-for="Email">Email</label>
+        <input asp-for="Email" class="input" placeholder="admin@mindaeondermaai.com" autofocus />
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+    <div class="field">
+        <label asp-for="Password">Password</label>
+        <input asp-for="Password" class="input" type="password" placeholder="••••••••" />
+        <span asp-validation-for="Password" class="text-danger"></span>
+    </div>
+    <div class="field flex items-center between">
+        <label class="flex items-center gap-2" style="font-weight:500;margin:0">
+            <input asp-for="RememberMe" type="checkbox" /> Keep me signed in
+        </label>
+    </div>
+    <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+</form>
+
+<p class="muted mt-4" style="font-size:12.5px">
+    Default administrator: <strong>admin@mindaeondermaai.com</strong>. Configure AI providers after first sign-in.
+</p>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,75 @@
+@model SimulateViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Treatment simulation";
+    var top = Model.Outcomes.FirstOrDefault();
+}
+<div class="page-head">
+    <h1>Treatment simulation</h1>
+    <span class="badge badge-teal">Illustrative</span>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-action="DigitalTwin" asp-route-id="@Model.AssessmentId">Digital Twin</a>
+    <a class="btn btn-ghost" asp-action="Report" asp-route-id="@Model.AssessmentId">Report</a>
+</div>
+
+<div class="card mb-3"><div class="card-b">
+    <p class="mt-0">Projected 6-month integrated skin-quality outcome for each candidate intervention, ranked by biological fit to this subject's needs. Baseline @Model.Baseline.ToString("0")/100. Non-diagnostic — a modeled comparison, not a treatment recommendation or a promised result.</p>
+    @if (top is not null)
+    {
+        <div class="alert alert-info" style="margin:0"><strong>Best biological fit:</strong> @top.Name — effective response @top.EffectiveResponse.ToString("0")%, projected @top.Projected6mo.ToString("0")/100 by 6 months (+@((top.Projected6mo - Model.Baseline).ToString("0.#")) vs baseline).</div>
+    }
+</div></div>
+
+<div class="grid cols-2 mb-3">
+    <div class="card"><div class="card-h"><h3>Projected trajectories</h3></div>
+        <div class="card-b"><canvas id="simChart" height="170"></canvas></div>
+    </div>
+    <div class="card"><div class="card-h"><h3>Ranked outcomes</h3></div>
+        <div class="card-b" style="padding:0">
+            <table class="table">
+                <thead><tr><th>Treatment</th><th>Category</th><th class="num">Fit %</th><th class="num">6-mo</th></tr></thead>
+                <tbody>
+                @foreach (var o in Model.Outcomes)
+                {
+                    <tr>
+                        <td><strong>@o.Name</strong></td>
+                        <td class="muted">@o.Category</td>
+                        <td class="num">@o.EffectiveResponse.ToString("0")</td>
+                        <td class="num" style="font-weight:700;color:var(--teal-600)">@o.Projected6mo.ToString("0")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (top is not null && top.Biomarkers.Count > 0)
+{
+    <div class="card mb-3"><div class="card-h"><h3>Predicted biomarker effect — @top.Name (6-mo)</h3></div>
+        <div class="card-b">
+            <div class="tag-list">
+                @foreach (var b in top.Biomarkers)
+                {
+                    <span class="chip" style="background:@(b.Pct6 >= 0 ? "#ecfdf5" : "#fef2f2");color:@(b.Pct6 >= 0 ? "var(--ok)" : "var(--danger)")">@b.Name @b.Pct6.ToString("+0.#;-0.#")%</span>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        const months = @Html.Raw(JsonSerializer.Serialize(Model.Months));
+        const series = @Html.Raw(JsonSerializer.Serialize(Model.Outcomes.Take(6).Select(o => new { o.Name, o.Integrated })));
+        const labels = months.map(m => m === 0 ? 'Today' : m + ' mo');
+        const palette = ['#0b7285', '#12a594', '#f59e0b', '#6366f1', '#db2777', '#0ea5e9'];
+        new Chart(document.getElementById('simChart'), {
+            type: 'line',
+            data: { labels, datasets: series.map((s, i) => ({ label: s.Name, data: s.Integrated, borderColor: palette[i % palette.length], backgroundColor: 'transparent', tension: .35, borderWidth: i === 0 ? 2.8 : 1.8, pointRadius: 2 })) },
+            options: { plugins: { legend: { position: 'bottom' } }, animation: { duration: 1100 },
+                scales: { y: { suggestedMin: Math.max(0, @Model.Baseline - 8), suggestedMax: 100, title: { display: true, text: 'Integrated score' } } } }
+        });
+    </script>
+}

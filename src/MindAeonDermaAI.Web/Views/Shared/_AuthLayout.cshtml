@@ -1,0 +1,48 @@
+@inject IBrandingService Branding
+@{ var brand = await Branding.GetAsync(); }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · @brand.ProductName</title>
+    <link rel="icon" href="~/img/logo-mark.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>:root{ --teal-500:@brand.PrimaryColor; --teal-600:@brand.PrimaryColor; --navy-800:@brand.SecondaryColor; --navy-900:@brand.SecondaryColor; }</style>
+</head>
+<body>
+<div class="auth">
+    <div class="hero">
+        <div class="brand">
+            <img src="~/img/logo-mark.svg" width="44" height="44" alt="logo"/>
+            <div>
+                <div class="name" style="font-size:19px">@brand.ProductName</div>
+                <div class="sub">Skin-Biology Intelligence</div>
+            </div>
+        </div>
+        <div>
+            <h1>Research-grade personalized skin-biology interpretation.</h1>
+            <p>Multimodal integration of skin imaging, protein biomarkers, demographics and lifestyle into an objective, non-diagnostic biological report.</p>
+            <div class="points">
+                <div>@Check() Image + proteomic multimodal scoring across three biological domains</div>
+                <div>@Check() Interpretable panel selection, phenotype classification & integrated score</div>
+                <div>@Check() Configurable AI providers — OpenAI, Anthropic, DeepSeek & your own LLM server</div>
+            </div>
+        </div>
+        <div style="color:#7d93af;font-size:12.5px">© @DateTime.UtcNow.Year MindAeon · For research use only — not a medical diagnosis.</div>
+    </div>
+    <div class="panel">
+        <div class="box">
+            @RenderBody()
+        </div>
+    </div>
+</div>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+@functions {
+    Microsoft.AspNetCore.Html.IHtmlContent Check() =>
+        new Microsoft.AspNetCore.Html.HtmlString("<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5'><path d='M20 6L9 17l-5-5'/></svg>");
+}

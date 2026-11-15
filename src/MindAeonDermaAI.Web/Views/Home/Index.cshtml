@@ -1,0 +1,101 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="page-head">
+    <h1>Welcome to MindAeon Dermalytics™</h1>
+    <div class="spacer"></div>
+    <a class="btn btn-dark" asp-controller="Assessments" asp-action="Scan">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><circle cx="12" cy="12" r="3"/></svg>
+        Live Skin Scan
+    </a>
+    <a class="btn btn-primary" asp-controller="Assessments" asp-action="Create">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        New assessment
+    </a>
+</div>
+
+@if (!Model.AiReady)
+{
+    <div class="alert alert-info">
+        No AI provider has an API key yet. Image analysis and narrative generation will use deterministic fallbacks until you
+        <a asp-controller="AiProviders" asp-action="Index">configure a provider</a> (DeepSeek, OpenAI, Anthropic, or your own LLM server).
+    </div>
+}
+
+<div class="grid cols-4 mb-3">
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@Model.SubjectCount</div><div class="l">Subjects</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+    </div></div>
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@Model.AssessmentCount</div><div class="l">Assessments</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 10h8M8 14h5"/></svg></div>
+    </div></div>
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@Model.ReportCount</div><div class="l">Reports</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/></svg></div>
+    </div></div>
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@Model.ConfiguredProviders</div><div class="l">AI providers ready</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 014 4v1a4 4 0 010 8v1a4 4 0 01-8 0v-1a4 4 0 010-8V6a4 4 0 014-4z"/></svg></div>
+    </div></div>
+</div>
+
+<div class="grid cols-3">
+    <div class="card" style="grid-column: span 2">
+        <div class="card-h"><h3>Recent assessments</h3></div>
+        <div class="card-b" style="padding:0">
+            @if (Model.Recent.Count == 0)
+            {
+                <div class="empty">
+                    <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 10h8M8 14h5"/></svg>
+                    <p class="mt-2">No assessments yet. Create your first one to see it here.</p>
+                    <a class="btn btn-primary btn-sm" asp-controller="Assessments" asp-action="Create">New assessment</a>
+                </div>
+            }
+            else
+            {
+                <table class="table">
+                    <thead><tr><th>Subject</th><th>Status</th><th>Panel</th><th class="num">Score</th><th>Date</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var r in Model.Recent)
+                    {
+                        <tr>
+                            <td><strong>@r.Code</strong> @(string.IsNullOrEmpty(r.Name) ? "" : $"· {r.Name}")</td>
+                            <td><span class="badge badge-navy">@r.Status</span></td>
+                            <td>@(r.Panel ?? "—")</td>
+                            <td class="num">@(r.Score.HasValue ? r.Score.Value.ToString("0") : "—")</td>
+                            <td class="muted">@r.Created.ToString("yyyy-MM-dd")</td>
+                            <td><a class="btn btn-ghost btn-sm" asp-controller="Assessments" asp-action="Details" asp-route-id="@r.Id">Open</a></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-h"><h3>Panel distribution</h3></div>
+        <div class="card-b">
+            @if (Model.PanelDistribution.Count == 0)
+            {
+                <p class="muted">No analyzed assessments yet.</p>
+            }
+            else
+            {
+                @foreach (var p in Model.PanelDistribution)
+                {
+                    var pct = Model.AssessmentCount > 0 ? (int)Math.Round(100.0 * p.Count / Model.AssessmentCount) : 0;
+                    <div class="mb-3">
+                        <div class="flex between mb-2"><span style="font-weight:600">@p.Name</span><span class="muted">@p.Count</span></div>
+                        <div class="meter"><span style="width:@(pct)%"></span></div>
+                    </div>
+                }
+            }
+            <div class="disclaimer">Research use only. Not a medical diagnosis.</div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+              <xsd:attribute name="xml:space" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="Dashboard"><value>Panel</value></data>
+  <data name="Clinical"><value>Klinik</value></data>
+  <data name="Subjects"><value>Denekler</value></data>
+  <data name="Assessments"><value>Değerlendirmeler</value></data>
+  <data name="Skin Scan"><value>Cilt Tarama</value></data>
+  <data name="Example Report"><value>Örnek Rapor</value></data>
+  <data name="AI Assistant"><value>AI Asistan</value></data>
+  <data name="Literature"><value>Literatür</value></data>
+  <data name="Clinic"><value>Klinik Paneli</value></data>
+  <data name="Clinical trials"><value>Klinik Çalışmalar</value></data>
+  <data name="Administration"><value>Yönetim</value></data>
+  <data name="Analytics"><value>Analitik</value></data>
+  <data name="AI Providers"><value>AI Sağlayıcılar</value></data>
+  <data name="Reference Data"><value>Referans Veri</value></data>
+  <data name="Branding"><value>Marka</value></data>
+  <data name="Users"><value>Kullanıcılar</value></data>
+  <data name="Compliance"><value>Uyumluluk</value></data>
+  <data name="Audit log"><value>Denetim Kaydı</value></data>
+  <data name="System health"><value>Sistem Sağlığı</value></data>
+  <data name="Research export"><value>Araştırma Dışa Aktarımı</value></data>
+  <data name="API docs"><value>API Belgeleri</value></data>
+  <data name="Sign out"><value>Çıkış</value></data>
+  <data name="Language"><value>Dil</value></data>
+  <data name="Research use only."><value>Yalnızca araştırma amaçlıdır.</value></data>
+  <data name="Not a medical diagnosis."><value>Tıbbi tanı değildir.</value></data>
+</root>

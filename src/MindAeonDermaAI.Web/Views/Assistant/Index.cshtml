@@ -1,0 +1,129 @@
+@{
+    ViewData["Title"] = "AI Assistant";
+    var aiReady = ViewData["AiReady"] is true;
+    var focus = ViewBag.Focus as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+}
+
+<div class="page-head">
+    <h1>AI Assistant</h1>
+    <span class="badge badge-teal">Data-grounded</span>
+    <div class="spacer"></div>
+    <label class="flex items-center gap-2 muted" style="font-size:12.5px">Focus record
+        <select id="focus" class="input btn-sm" style="width:auto">
+            <option value="">— whole platform —</option>
+            @foreach (var f in focus) { <option value="@f.Id">@f.Label</option> }
+        </select>
+    </label>
+</div>
+
+@if (!aiReady)
+{
+    <div class="alert alert-info">No AI provider key is configured yet, so the assistant can't answer live. Add one under <a asp-controller="AiProviders" asp-action="Index">Admin → AI Providers</a> (DeepSeek is already integrated — just needs balance/credit).</div>
+}
+
+<div class="card">
+    <div class="card-b">
+        <div class="chat">
+            <div class="chat-suggest" id="suggest">
+                <button data-q="Summarize the current platform data.">Summarize the platform</button>
+                <button data-q="Which subject has the highest laxity (Deep ECM) need, and why?">Highest laxity need?</button>
+                <button data-q="Compare the barrier-deficient cases and rank them by barrier resilience.">Compare barrier cases</button>
+                <button data-q="What does 'cross-modal concordance' mean and how is it computed here?">Explain concordance</button>
+                <button data-q="In general skin biology, what is the role of filaggrin (FLG)?">What is filaggrin? (science)</button>
+            </div>
+            <div class="chat-msgs" id="msgs"></div>
+            <div class="chat-input">
+                <button type="button" id="mic" class="icon-btn" title="Voice input (speech-to-text)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
+                </button>
+                <button type="button" id="speak" class="icon-btn" title="Read answers aloud (text-to-speech)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8a5 5 0 010 8"/></svg>
+                </button>
+                <textarea id="input" placeholder="Ask about your data (e.g. 'rank subjects by integrated score') or a skin-biology question…"></textarea>
+                <button type="button" id="send" class="btn btn-primary" style="height:46px">Send</button>
+            </div>
+            <div class="disclaimer">Research-use assistant. Platform answers come only from your database; general skin-biology answers are background knowledge, not medical advice or diagnosis.</div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+  const msgs = document.getElementById('msgs'), input = document.getElementById('input');
+  const sendBtn = document.getElementById('send'), micBtn = document.getElementById('mic'), speakBtn = document.getElementById('speak');
+  const focusSel = document.getElementById('focus');
+  const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+  const chatMode = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((string?)ViewBag.Mode));
+  const history = [];
+  let speakOn = false, busy = false;
+
+  function esc(s){ return (s||'').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+  function bubble(role, text){
+    const wrap = document.createElement('div'); wrap.className = 'msg ' + (role === 'user' ? 'user' : 'ai');
+    wrap.innerHTML = `<div class="ava">${role === 'user' ? 'You' : 'AI'}</div><div class="b">${text}</div>`;
+    msgs.appendChild(wrap); msgs.scrollTop = msgs.scrollHeight; return wrap.querySelector('.b');
+  }
+  function typing(){ const b = bubble('ai', '<span class="typing"><span></span><span></span><span></span></span>'); return b.parentElement; }
+
+  async function ask(text){
+    if (busy || !text.trim()) return; busy = true;
+    bubble('user', esc(text)); history.push({ role:'user', content:text });
+    input.value = ''; const t = typing();
+    try {
+      const res = await fetch('@Url.Action("Ask","Assistant")', {
+        method:'POST', headers:{'Content-Type':'application/json','RequestVerificationToken':token},
+        body: JSON.stringify({ messages: history.slice(-12), assessmentId: focusSel.value ? parseInt(focusSel.value) : null, mode: chatMode })
+      });
+      const data = await res.json(); t.remove();
+      const reply = data.reply || 'Sorry, no response.';
+      bubble('ai', esc(reply)); history.push({ role:'assistant', content: reply });
+      if (speakOn) speak(reply);
+    } catch (e) { t.remove(); bubble('ai', 'Network error contacting the assistant.'); }
+    busy = false;
+  }
+
+  sendBtn.addEventListener('click', () => ask(input.value));
+  input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(input.value); } });
+  document.getElementById('suggest').addEventListener('click', e => { const q = e.target.closest('button')?.dataset.q; if (q) ask(q); });
+
+  // ---- Text-to-speech ----
+  function speak(text){
+    if (!('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text.slice(0, 600));
+    speechSynthesis.speak(u);
+  }
+  speakBtn.addEventListener('click', () => {
+    speakOn = !speakOn; speakBtn.classList.toggle('on', speakOn);
+    if (!speakOn && 'speechSynthesis' in window) speechSynthesis.cancel();
+  });
+
+  // ---- Speech-to-text (Web Speech API) ----
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR) {
+    const rec = new SR(); rec.lang = document.documentElement.lang || 'en-US'; rec.interimResults = true; let listening = false;
+    micBtn.addEventListener('click', () => { if (listening) { rec.stop(); } else { try { rec.start(); } catch (_) {} } });
+    rec.onstart = () => { listening = true; micBtn.classList.add('rec'); };
+    rec.onend = () => { listening = false; micBtn.classList.remove('rec'); };
+    rec.onresult = e => {
+      let txt = ''; for (let i = 0; i < e.results.length; i++) txt += e.results[i][0].transcript;
+      input.value = txt;
+      if (e.results[e.results.length - 1].isFinal) { setTimeout(() => ask(input.value), 200); }
+    };
+  } else {
+    micBtn.disabled = true; micBtn.title = 'Voice input not supported in this browser (use Chrome or Edge)';
+  }
+
+  bubble('ai', chatMode === 'patient'
+    ? "Hi! I can explain your skin results in simple terms. Ask me anything — for example, why a value is low, or what you could focus on. This is friendly guidance, not medical advice."
+    : "Hi! I'm your MindAeon Dermalytics assistant. Ask me about your subjects, assessments and scores — or a general skin-biology question. I answer platform questions only from your database.");
+
+  // Prefill: focus a specific assessment and optionally auto-send an incoming question (from "Explain this patient").
+  const focusId = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.FocusId as int?));
+  const prefill = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((string?)ViewBag.Prefill));
+  if (focusId) { focusSel.value = String(focusId); }
+  if (prefill) { setTimeout(() => ask(prefill), 300); }
+})();
+</script>
+}

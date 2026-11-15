@@ -1,0 +1,89 @@
+@model DigitalTwinViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Digital Twin";
+}
+<div class="page-head">
+    <h1>Digital Twin · projected trajectory</h1>
+    <span class="badge badge-teal">Illustrative</span>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-action="Report" asp-route-id="@Model.AssessmentId">Report</a>
+    <a class="btn btn-ghost" asp-action="Details" asp-route-id="@Model.AssessmentId">Back</a>
+</div>
+
+<div class="card mb-3"><div class="card-b">
+    <p class="mt-0">Under the biologically best-fit intervention (<strong>@Model.TopTreatment</strong>, response likelihood @Model.TopLikelihood.ToString("0")%),
+    the model projects the integrated skin-quality score over the next 12 months. Non-diagnostic — an illustrative projection, not a guarantee of outcome.</p>
+    <div class="grid cols-4">
+        @{ var labels = new[] { "Today", "3 months", "6 months", "12 months" }; }
+        @for (int i = 0; i < Model.Months.Length; i++)
+        {
+            var val = i < Model.Integrated.Length ? Model.Integrated[i] : 0;
+            var delta = val - Model.Baseline;
+            <div style="text-align:center">
+                <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">@labels[i]</div>
+                <div class="score-big" style="font-size:30px;color:@(i == 0 ? "var(--navy-800)" : "var(--teal-600)")">@val.ToString("0")</div>
+                <div class="muted" style="font-size:12px">@(i == 0 ? "baseline" : (delta >= 0 ? "+" : "") + delta.ToString("0.#"))</div>
+            </div>
+        }
+    </div>
+</div></div>
+
+<div class="grid cols-2 mb-3">
+    <div class="card"><div class="card-h"><h3>Integrated score — 12-month outlook</h3></div>
+        <div class="card-b"><canvas id="twinChart" height="150"></canvas></div>
+    </div>
+    <div class="card"><div class="card-h"><h3>Predicted biomarker change</h3><span class="badge badge-navy">under @Model.TopTreatment</span></div>
+        <div class="card-b" style="padding:0">
+            @if (Model.Biomarkers.Count == 0)
+            {
+                <p class="muted" style="padding:18px">No dominant biomarker drivers to project.</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead><tr><th>Biomarker</th><th class="num">Now</th><th class="num">6-mo</th><th class="num">Δ% (6-mo)</th><th>Trend</th></tr></thead>
+                    <tbody>
+                    @foreach (var b in Model.Biomarkers)
+                    {
+                        <tr>
+                            <td>@b.Name</td>
+                            <td class="num">@b.Baseline.ToString("0.#")</td>
+                            <td class="num">@b.M6.ToString("0.#")</td>
+                            <td class="num" style="color:@(b.Pct6 >= 0 ? "var(--ok)" : "var(--danger)")">@b.Pct6.ToString("+0.#;-0.#")%</td>
+                            <td class="muted">@b.Direction</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>
+
+@if (Model.Biomarkers.Count > 0)
+{
+    var lead = Model.Biomarkers.OrderByDescending(b => Math.Abs(b.Pct6)).First();
+    <div class="alert alert-info">
+        If <strong>@Model.TopTreatment</strong> is followed, <strong>@lead.Name</strong> is projected to change about <strong>@lead.Pct6.ToString("+0.#;-0.#")%</strong> by 6 months (@lead.Direction).
+        This is a modeled projection for research and monitoring, not a diagnosis or a promised result.
+    </div>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        const tMonths = @Html.Raw(JsonSerializer.Serialize(Model.Months));
+        const tMain = @Html.Raw(JsonSerializer.Serialize(Model.Integrated));
+        const tAlts = @Html.Raw(JsonSerializer.Serialize(Model.Alternatives.Select(a => new { a.Category, a.Curve })));
+        const labels = tMonths.map(m => m === 0 ? 'Today' : m + ' mo');
+        const palette = ['#0b7285', '#12a594', '#f59e0b', '#6366f1'];
+        const datasets = [{ label: @Html.Raw(JsonSerializer.Serialize(Model.TopTreatment)), data: tMain, borderColor: '#0b7285', backgroundColor: 'rgba(18,165,148,.12)', fill: true, tension: .35, borderWidth: 2.6, pointRadius: 3 }];
+        tAlts.slice(1).forEach((a, i) => datasets.push({ label: a.Category, data: a.Curve, borderColor: palette[(i + 1) % palette.length], backgroundColor: 'transparent', tension: .35, borderWidth: 1.6, borderDash: [4, 4], pointRadius: 2 }));
+        new Chart(document.getElementById('twinChart'), {
+            type: 'line', data: { labels, datasets },
+            options: { plugins: { legend: { position: 'bottom' } }, animation: { duration: 1200 },
+                scales: { y: { suggestedMin: Math.max(0, tMain[0] - 8), suggestedMax: 100, title: { display: true, text: 'Integrated score' } } } }
+        });
+    </script>
+}

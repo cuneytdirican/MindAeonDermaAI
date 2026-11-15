@@ -1,0 +1,49 @@
+<svg width="720" height="440" viewBox="0 0 720 440" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Platform report preview">
+  <defs>
+    <linearGradient id="pv" x1="0" y1="0" x2="720" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B2340"/><stop offset="1" stop-color="#123152"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="704" height="424" rx="18" fill="#FFFFFF" stroke="#E6EAF0"/>
+  <!-- top bar -->
+  <rect x="8" y="8" width="704" height="46" rx="18" fill="#F8FAFC"/>
+  <circle cx="34" cy="31" r="5" fill="#FF5F57"/><circle cx="52" cy="31" r="5" fill="#FEBC2E"/><circle cx="70" cy="31" r="5" fill="#28C840"/>
+  <rect x="300" y="24" width="120" height="14" rx="7" fill="#E6EAF0"/>
+
+  <!-- hero score banner -->
+  <rect x="26" y="70" width="668" height="86" rx="14" fill="url(#pv)"/>
+  <text x="46" y="100" font-family="Inter, sans-serif" font-size="11" fill="#9FB3CC">INTEGRATED SKIN-QUALITY</text>
+  <text x="46" y="138" font-family="Inter, sans-serif" font-size="34" font-weight="800" fill="#FFFFFF">72<tspan font-size="15" fill="#9FB3CC">/100</tspan></text>
+  <text x="250" y="100" font-family="Inter, sans-serif" font-size="11" fill="#9FB3CC">SELECTED PANEL</text>
+  <text x="250" y="122" font-family="Inter, sans-serif" font-size="15" font-weight="700" fill="#FFFFFF">Collagen Remodeling</text>
+  <text x="250" y="142" font-family="Inter, sans-serif" font-size="12" fill="#2DD4BF">Phenotype: Collagen-depleted</text>
+  <g font-family="Inter, sans-serif" text-anchor="middle">
+    <text x="536" y="112" font-size="20" font-weight="800" fill="#FFFFFF">78</text><text x="536" y="130" font-size="10" fill="#9FB3CC">Panel</text>
+    <text x="596" y="112" font-size="20" font-weight="800" fill="#FFFFFF">64</text><text x="596" y="130" font-size="10" fill="#9FB3CC">Image</text>
+    <text x="656" y="112" font-size="20" font-weight="800" fill="#FFFFFF">70</text><text x="656" y="130" font-size="10" fill="#9FB3CC">Lifestyle</text>
+  </g>
+
+  <!-- radar card -->
+  <rect x="26" y="172" width="330" height="240" rx="14" fill="#FFFFFF" stroke="#E6EAF0"/>
+  <text x="46" y="200" font-family="Inter, sans-serif" font-size="12" font-weight="700" fill="#0B2340">Panel need — radar</text>
+  <g transform="translate(191,300)">
+    <polygon points="0,-78 68,39 -68,39" fill="none" stroke="#E6EAF0"/>
+    <polygon points="0,-52 45,26 -45,26" fill="none" stroke="#E6EAF0"/>
+    <polygon points="0,-70 40,44 -30,18" fill="#12A594" fill-opacity="0.2" stroke="#0B7285" stroke-width="2"/>
+    <g fill="#0B7285"><circle cx="0" cy="-70" r="3.5"/><circle cx="40" cy="44" r="3.5"/><circle cx="-30" cy="18" r="3.5"/></g>
+  </g>
+
+  <!-- biomarker bars card -->
+  <rect x="370" y="172" width="324" height="240" rx="14" fill="#FFFFFF" stroke="#E6EAF0"/>
+  <text x="390" y="200" font-family="Inter, sans-serif" font-size="12" font-weight="700" fill="#0B2340">Biomarkers — z vs young ref</text>
+  <g font-family="Inter, sans-serif" font-size="10" fill="#6B7280">
+    <text x="390" y="228">COL1A1</text><rect x="470" y="220" width="120" height="9" rx="4.5" fill="#F1F5F9"/><rect x="470" y="220" width="34" height="9" rx="4.5" fill="#DC2626"/>
+    <text x="390" y="252">MMP-1</text><rect x="470" y="244" width="120" height="9" rx="4.5" fill="#F1F5F9"/><rect x="470" y="244" width="92" height="9" rx="4.5" fill="#12A594"/>
+    <text x="390" y="276">Elastin</text><rect x="470" y="268" width="120" height="9" rx="4.5" fill="#F1F5F9"/><rect x="470" y="268" width="44" height="9" rx="4.5" fill="#DC2626"/>
+    <text x="390" y="300">TGF-β1</text><rect x="470" y="292" width="120" height="9" rx="4.5" fill="#F1F5F9"/><rect x="470" y="292" width="70" height="9" rx="4.5" fill="#0B7285"/>
+    <text x="390" y="324">Filaggrin</text><rect x="470" y="316" width="120" height="9" rx="4.5" fill="#F1F5F9"/><rect x="470" y="316" width="58" height="9" rx="4.5" fill="#2DD4BF"/>
+    <text x="390" y="348">Decorin</text><rect x="470" y="340" width="120" height="9" rx="4.5" fill="#F1F5F9"/><rect x="470" y="340" width="80" height="9" rx="4.5" fill="#12A594"/>
+  </g>
+  <rect x="390" y="372" width="284" height="24" rx="8" fill="#EAFBF7"/>
+  <text x="404" y="388" font-family="Inter, sans-serif" font-size="11" fill="#0B7285">Explainable reasoning summary included</text>
+</svg>

@@ -1,0 +1,128 @@
+@using System.Text.Json
+@using MindAeonDermaAI.Web.Controllers
+@model TimelineVm
+@{
+    ViewData["Title"] = "Progress timeline";
+    var pts = Model.Points;
+    var first = pts.FirstOrDefault();
+    var last = pts.LastOrDefault();
+    var delta = (first is not null && last is not null) ? last.Integrated - first.Integrated : 0d;
+}
+
+<div class="page-head">
+    <div>
+        <h1 style="margin-bottom:2px">Progress timeline</h1>
+        <div class="muted">Subject @Model.SubjectCode@(string.IsNullOrEmpty(Model.SubjectName) ? "" : $" · {Model.SubjectName}") · Longitudinal view · Research use</div>
+    </div>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-controller="Subjects" asp-action="Details" asp-route-id="@Model.SubjectId">Back to subject</a>
+</div>
+
+@if (pts.Count < 1)
+{
+    <div class="card">
+        <div class="card-b">
+            <div class="empty">
+                <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+                <p class="mt-2">No analyzed assessments yet to chart.</p>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <!-- KPI strip -->
+    <div class="grid cols-3 mb-3">
+        <div class="card"><div class="card-b">
+            <div class="l muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">Latest integrated</div>
+            <div class="score-big" style="font-size:30px">@last!.Integrated.ToString("0")<span style="font-size:13px;color:var(--muted)">/100</span></div>
+            <div class="hint">as of @last.Date.ToString("yyyy-MM-dd")</div>
+        </div></div>
+        <div class="card"><div class="card-b">
+            <div class="l muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">Change vs first point</div>
+            @if (Model.HasTrend)
+            {
+                <div class="score-big" style="font-size:30px;color:@(delta >= 0 ? "var(--ok)" : "var(--danger)")">@delta.ToString("+0.0;-0.0")</div>
+                <div class="hint">from @first!.Integrated.ToString("0") on @first.Date.ToString("yyyy-MM-dd")</div>
+            }
+            else
+            {
+                <div style="font-size:16px;font-weight:700;color:var(--navy-800)">Baseline</div>
+                <div class="hint">Only one analyzed point so far</div>
+            }
+        </div></div>
+        <div class="card"><div class="card-b">
+            <div class="l muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">Latest biological skin age</div>
+            <div class="score-big" style="font-size:30px">@(last.BiologicalSkinAge?.ToString("0") ?? "—")<span style="font-size:13px;color:var(--muted)">yrs</span></div>
+            <div class="hint">Illustrative, non-diagnostic</div>
+        </div></div>
+    </div>
+
+    <!-- Trend chart -->
+    <div class="card mb-3">
+        <div class="card-h"><h3>Integrated skin-quality &amp; panel need over time</h3><span class="badge badge-muted">Longitudinal</span></div>
+        <div class="card-b">
+            <canvas id="trendChart" height="120"></canvas>
+            <p class="hint mt-3">Integrated skin-quality score (bold) tracked alongside the three panel need scores across all analyzed timepoints.</p>
+        </div>
+    </div>
+
+    <!-- Milestone table -->
+    <div class="card mb-3">
+        <div class="card-h"><h3>Assessment milestones</h3></div>
+        <div class="card-b" style="padding:0">
+            <table class="table">
+                <thead><tr><th>Date</th><th>Timepoint</th><th class="num">Integrated</th><th>Panel</th><th>Phenotype</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var p in pts)
+                {
+                    <tr>
+                        <td class="muted">@p.Date.ToString("yyyy-MM-dd")</td>
+                        <td><span class="badge badge-navy">@p.TimePoint</span></td>
+                        <td class="num"><strong>@p.Integrated.ToString("0")</strong></td>
+                        <td>@(p.Panel ?? "—")</td>
+                        <td class="muted">@(p.Phenotype ?? "—")</td>
+                        <td><a class="btn btn-ghost btn-sm" asp-controller="Assessments" asp-action="Report" asp-route-id="@p.AssessmentId">Report</a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="disclaimer">Research use only. Not a medical diagnosis. Trends are illustrative and must be interpreted by a qualified professional.</div>
+}
+
+@section Scripts {
+    @if (pts.Count >= 1)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+        <script>
+            const labels = @Html.Raw(JsonSerializer.Serialize(pts.Select(p => p.Date.ToString("yyyy-MM-dd"))));
+            const integrated = @Html.Raw(JsonSerializer.Serialize(pts.Select(p => Math.Round(p.Integrated, 1))));
+            const collagen = @Html.Raw(JsonSerializer.Serialize(pts.Select(p => Math.Round(p.CollagenNeed, 1))));
+            const barrier = @Html.Raw(JsonSerializer.Serialize(pts.Select(p => Math.Round(p.BarrierNeed, 1))));
+            const deepEcm = @Html.Raw(JsonSerializer.Serialize(pts.Select(p => Math.Round(p.DeepEcmNeed, 1))));
+
+            new Chart(document.getElementById('trendChart'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Integrated skin-quality', data: integrated, borderColor: '#0b2340', backgroundColor: 'rgba(11,35,64,.08)', borderWidth: 3, tension: .3, pointRadius: 4, fill: true },
+                        { label: 'Collagen need', data: collagen, borderColor: 'rgba(11,114,133,.55)', backgroundColor: 'transparent', borderWidth: 1.6, tension: .3, pointRadius: 2, borderDash: [5, 4] },
+                        { label: 'Barrier need', data: barrier, borderColor: 'rgba(18,165,148,.55)', backgroundColor: 'transparent', borderWidth: 1.6, tension: .3, pointRadius: 2, borderDash: [5, 4] },
+                        { label: 'Deep-ECM need', data: deepEcm, borderColor: 'rgba(245,158,11,.55)', backgroundColor: 'transparent', borderWidth: 1.6, tension: .3, pointRadius: 2, borderDash: [5, 4] }
+                    ]
+                },
+                options: {
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: {
+                        y: { suggestedMin: 0, suggestedMax: 100, title: { display: true, text: 'Score (0–100)' }, grid: { color: '#eef2f7' } },
+                        x: { title: { display: true, text: 'Assessment date' } }
+                    }
+                }
+            });
+        </script>
+    }
+}

@@ -1,0 +1,122 @@
+@model CompareViewModel
+@{
+    ViewData["Title"] = "Compare";
+    string Delta(double? d, bool higherBetter = true)
+    {
+        if (d is null) return "<span class='delta-flat'>—</span>";
+        var cls = d.Value == 0 ? "delta-flat" : ((d.Value > 0) == higherBetter ? "delta-up" : "delta-down");
+        return $"<span class='{cls}'>{d.Value:+0.#;-0.#;0}</span>";
+    }
+}
+<div class="page-head">
+    <h1>Before / After comparison</h1>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-action="Index">All assessments</a>
+</div>
+
+<form method="get" class="card mb-3"><div class="card-b">
+    <div class="row-2">
+        <div class="field"><label>Before (A)</label>
+            <select name="a" class="input" onchange="this.form.submit()">
+                @foreach (var o in Model.Assessments) { <option value="@o.Id" selected="@(o.Id == Model.AId)">@o.Label</option> }
+            </select>
+        </div>
+        <div class="field"><label>After (B)</label>
+            <select name="b" class="input" onchange="this.form.submit()">
+                @foreach (var o in Model.Assessments) { <option value="@o.Id" selected="@(o.Id == Model.BId)">@o.Label</option> }
+            </select>
+        </div>
+    </div>
+</div></form>
+
+@if (Model.A is null || Model.B is null)
+{
+    <div class="empty"><p>Select two assessments to compare.</p></div>
+}
+else
+{
+    var a = Model.A; var b = Model.B;
+    <div class="grid cols-2 mb-3">
+        <div class="card"><div class="card-h"><h3>Image morph</h3><span class="badge badge-muted">Drag the slider</span></div>
+            <div class="card-b">
+                <div class="cmp-slider" id="cmp">
+                    <img id="cmpA" src="@Url.Action("Image", new { id = a.ImageId })" alt="before" onerror="document.getElementById('cmp').dataset.noimg='1'"/>
+                    <img id="cmpB" class="after" src="@Url.Action("Image", new { id = b.ImageId })" alt="after"/>
+                    <div class="divider" id="cmpDiv"></div>
+                    <span class="tag l">Before · @a.TimePoint</span><span class="tag r">After · @b.TimePoint</span>
+                </div>
+                <input type="range" min="0" max="100" value="50" class="cmp-range" id="cmpRange"/>
+                <div class="hint" id="cmpHint">If a subject has synthetic (non-photo) images, the morph shows placeholders — use the score comparison below.</div>
+            </div>
+        </div>
+        <div class="card"><div class="card-h"><h3>Headline change</h3></div>
+            <div class="card-b">
+                <div class="flex gap-3 items-center" style="justify-content:center">
+                    <div style="text-align:center"><div class="muted" style="font-size:11px">Before</div><div class="score-big" style="font-size:30px">@(a.Integrated?.ToString("0") ?? "—")</div></div>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--teal-500)" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    <div style="text-align:center"><div class="muted" style="font-size:11px">After</div><div class="score-big" style="font-size:30px;color:var(--teal-600)">@(b.Integrated?.ToString("0") ?? "—")</div></div>
+                    <div style="text-align:center;margin-left:10px"><div class="muted" style="font-size:11px">Δ integrated</div><div class="score-big" style="font-size:26px">@Html.Raw(Delta(Model.IntegratedDelta))</div></div>
+                </div>
+                <table class="table mt-3">
+                    <thead><tr><th>Metric</th><th class="num">Before</th><th class="num">After</th><th class="num">Δ</th></tr></thead>
+                    <tbody>
+                        <tr><td>Image overall</td><td class="num">@(a.ImageOverall?.ToString("0") ?? "—")</td><td class="num">@(b.ImageOverall?.ToString("0") ?? "—")</td><td class="num">@Html.Raw(Delta(a.ImageOverall.HasValue && b.ImageOverall.HasValue ? b.ImageOverall - a.ImageOverall : null))</td></tr>
+                        <tr><td>Cross-modal concordance</td><td class="num">@(a.Concordance?.ToString("0") ?? "—")</td><td class="num">@(b.Concordance?.ToString("0") ?? "—")</td><td class="num">@Html.Raw(Delta(a.Concordance.HasValue && b.Concordance.HasValue ? b.Concordance - a.Concordance : null))</td></tr>
+                        <tr><td>Barrier resilience</td><td class="num">@(a.BarrierIdx?.ToString("0") ?? "—")</td><td class="num">@(b.BarrierIdx?.ToString("0") ?? "—")</td><td class="num">@Html.Raw(Delta(a.BarrierIdx.HasValue && b.BarrierIdx.HasValue ? b.BarrierIdx - a.BarrierIdx : null))</td></tr>
+                        <tr><td>Remodeling balance</td><td class="num">@(a.RemodelIdx?.ToString("0") ?? "—")</td><td class="num">@(b.RemodelIdx?.ToString("0") ?? "—")</td><td class="num">@Html.Raw(Delta(a.RemodelIdx.HasValue && b.RemodelIdx.HasValue ? b.RemodelIdx - a.RemodelIdx : null))</td></tr>
+                        <tr><td>Selected panel</td><td class="num">@(a.Panel ?? "—")</td><td class="num">@(b.Panel ?? "—")</td><td class="num"></td></tr>
+                        <tr><td>Primary phenotype</td><td class="num">@(a.Phenotype ?? "—")</td><td class="num">@(b.Phenotype ?? "—")</td><td class="num"></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.ZoneDeltas.Count > 0)
+    {
+        <div class="card mb-3"><div class="card-h"><h3>Regional change</h3></div>
+            <div class="card-b" style="padding:0">
+                <table class="table">
+                    <thead><tr><th>Zone</th><th class="num">Before</th><th class="num">After</th><th class="num">Δ</th></tr></thead>
+                    <tbody>
+                    @foreach (var z in Model.ZoneDeltas)
+                    {
+                        <tr><td>@z.Zone</td><td class="num">@(z.A?.ToString("0") ?? "—")</td><td class="num">@(z.B?.ToString("0") ?? "—")</td><td class="num">@Html.Raw(Delta(z.Delta))</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @if (Model.BiomarkerDeltas.Count > 0)
+    {
+        <div class="card mb-3"><div class="card-h"><h3>Biomarker change</h3></div>
+            <div class="card-b" style="padding:0">
+                <table class="table">
+                    <thead><tr><th>Biomarker</th><th class="num">Before</th><th class="num">After</th><th class="num">Δ%</th></tr></thead>
+                    <tbody>
+                    @foreach (var m in Model.BiomarkerDeltas)
+                    {
+                        <tr><td>@m.Name</td><td class="num">@(m.A?.ToString("0.#") ?? "—")</td><td class="num">@(m.B?.ToString("0.#") ?? "—")</td><td class="num">@(m.PctChange.HasValue ? m.PctChange.Value.ToString("+0.#;-0.#") + "%" : "—")</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+
+@section Scripts {
+<script>
+(function () {
+  const range = document.getElementById('cmpRange'); if (!range) return;
+  const after = document.getElementById('cmpB'), div = document.getElementById('cmpDiv'), cmp = document.getElementById('cmp');
+  function set(v){ after.style.clipPath = 'inset(0 0 0 ' + v + '%)'; div.style.left = v + '%'; }
+  range.addEventListener('input', () => set(range.value));
+  set(50);
+  // Hide the morph card gracefully if neither image is a real photo.
+  let errs = 0; ['cmpA','cmpB'].forEach(id => { const im = document.getElementById(id); im.addEventListener('error', () => { if (++errs >= 2 && cmp) { cmp.style.display='none'; range.style.display='none'; } }); });
+})();
+</script>
+}

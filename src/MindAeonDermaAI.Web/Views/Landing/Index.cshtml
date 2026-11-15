@@ -1,0 +1,218 @@
+@{
+    Layout = null;
+    ViewData["Title"] = "MindAeon Dermalytics™ — AI-Powered Skin Biology Intelligence";
+    var authed = User?.Identity?.IsAuthenticated == true;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <meta name="description" content="MindAeon Dermalytics — AI-Powered Multimodal Skin Biology Intelligence Platform integrating computer vision, proteomics, systems biology and explainable AI." />
+    <link rel="icon" href="~/img/logo-mark.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="mk">
+
+<!-- NAV -->
+<header class="mk-nav">
+    <div class="mk-wrap row">
+        <a class="mk-brand" asp-controller="Landing" asp-action="Index">
+            <img src="~/img/logo-mark.svg" width="40" height="40" alt="MindAeon Dermalytics logo"/>
+            <span><span class="bn">MindAeon Dermalytics™</span><br/><span class="bt">Skin Biology Intelligence</span></span>
+        </a>
+        <nav class="links">
+            <a href="#platform">Platform</a>
+            <a href="#science">Science</a>
+            <a href="#how">How it works</a>
+            <a href="#security">Security</a>
+        </nav>
+        <div class="spacer"></div>
+        @if (authed)
+        {
+            <a class="mk-btn mk-btn-primary" asp-controller="Home" asp-action="Index">Open dashboard</a>
+        }
+        else
+        {
+            <a class="mk-btn mk-btn-ghost" asp-controller="Account" asp-action="Login">Sign in</a>
+            <a class="mk-btn mk-btn-primary" asp-controller="Account" asp-action="Login">Enter platform →</a>
+        }
+    </div>
+</header>
+
+<!-- HERO -->
+<section class="mk-hero">
+    <div class="mk-wrap grid">
+        <div>
+            <span class="mk-eyebrow">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 2l2.4 5 5.6.8-4 4 .9 5.6L12 19l-5 2.6.9-5.6-4-4 5.6-.8z"/></svg>
+                Explainable AI · Multimodal · Research-grade
+            </span>
+            <h1 class="mk-h1">MindAeon Dermalytics<span class="tm">™</span></h1>
+            <p class="mk-tag">AI-Powered Multimodal Skin Biology Intelligence Platform</p>
+            <p class="mk-sub">Integrating <b>Computer Vision</b>, <b>Proteomics</b>, <b>Systems Biology</b> and <b>Explainable Artificial Intelligence</b> for Personalized Skin Biology Assessment.</p>
+            <div class="mk-cta-row">
+                <a class="mk-btn mk-btn-primary" asp-controller="Account" asp-action="Login">
+                    Sign in to the platform
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+                <a class="mk-btn mk-btn-ghost" href="#science">Explore the science</a>
+            </div>
+            <div class="mk-trust">
+                <span>@Ico() Non-diagnostic · research use</span>
+                <span>@Ico() On-prem · MS SQL · Windows IIS</span>
+                <span>@Ico() Bring your own LLM (DeepSeek / custom)</span>
+            </div>
+        </div>
+        <div class="mk-hero-art">
+            <img src="~/img/hero-illustration.svg" alt="Multimodal skin biology analysis illustration"/>
+        </div>
+    </div>
+</section>
+
+<!-- SCIENCE PILLARS -->
+<section class="mk-section" id="science">
+    <div class="mk-wrap">
+        <div class="mk-head">
+            <div class="k">Four scientific pillars</div>
+            <h2>One platform, four disciplines</h2>
+            <p>Dermalytics fuses image-derived signals, quantitative proteomics and biological reasoning into a single, transparent interpretation.</p>
+        </div>
+        <div class="mk-cards">
+            <div class="mk-card">
+                <div class="mk-ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                <h3>Computer Vision</h3>
+                <p>Vision models score skin/face images into standardized 0–100 metrics — hydration, texture, wrinkles, redness, pigmentation and more.</p>
+            </div>
+            <div class="mk-card">
+                <div class="mk-ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="6" cy="7" r="2.4"/><circle cx="18" cy="7" r="2.4"/><circle cx="12" cy="17" r="2.4"/><path d="M7.6 8.4 11 15m6-6.6L13 15"/></svg></div>
+                <h3>Proteomics</h3>
+                <p>Quantitative biomarkers across collagen, barrier and deep-ECM pathways are normalized as robust z-scores against reference distributions.</p>
+            </div>
+            <div class="mk-card">
+                <div class="mk-ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 6.6 10.5 11M17 6.6 13.5 11M10.5 13 7 17.4M13.5 13 17 17.4"/></svg></div>
+                <h3>Systems Biology</h3>
+                <p>Pathway-level modeling selects the biological panel of greatest need and classifies one or more skin-aging phenotypes.</p>
+            </div>
+            <div class="mk-card">
+                <div class="mk-ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3a4 4 0 0 1 4 4 4 4 0 0 1 0 7 4 4 0 0 1-8 0 4 4 0 0 1 0-7 4 4 0 0 1 4-4z"/><path d="M9.5 12.5 11 14l3.5-3.5"/></svg></div>
+                <h3>Explainable AI</h3>
+                <p>Every report shows assumptions, model rationale and a transparent reasoning summary — deterministic scores, cautious academic language.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="mk-section alt" id="how">
+    <div class="mk-wrap">
+        <div class="mk-head">
+            <div class="k">Workflow</div>
+            <h2>From capture to explainable report</h2>
+        </div>
+        <div class="mk-steps">
+            <div class="mk-step"><div class="n">1</div><h4>Capture</h4><p>Upload skin/face images and enter protein biomarker values — every categorical field is selected, never free-typed.</p></div>
+            <div class="mk-step"><div class="n">2</div><h4>Quantify</h4><p>Vision scoring plus z-score normalization against a literature-inspired synthetic reference cohort.</p></div>
+            <div class="mk-step"><div class="n">3</div><h4>Model</h4><p>Panel need-scores, integrated skin-quality score, lifestyle weighting and phenotype classification.</p></div>
+            <div class="mk-step"><div class="n">4</div><h4>Report</h4><p>An empathetic, objective, non-diagnostic report on screen and as a branded PDF.</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- PLATFORM PREVIEW -->
+<section class="mk-section" id="platform">
+    <div class="mk-wrap mk-split">
+        <div>
+            <div class="k" style="color:var(--teal-600);font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase">The platform</div>
+            <h2 style="font-size:32px;color:var(--navy-800);letter-spacing:-.02em;margin:8px 0 4px">Research-grade reports investors can trust</h2>
+            <ul class="mk-list">
+                <li>@Chk() <span><b>Three biological domains &amp; panels</b> — collagen remodeling, barrier/hydration, deep-ECM laxity.</span></li>
+                <li>@Chk() <span><b>Integrated skin-quality score</b> combining panel, image and lifestyle signals with cohort percentile.</span></li>
+                <li>@Chk() <span><b>Phenotype classification</b> — barrier-deficient, collagen-depleted, inflammaging, laxity and more.</span></li>
+                <li>@Chk() <span><b>Configurable AI providers</b> — DeepSeek, OpenAI, Anthropic, Gemini, Azure, or your own LLM server. Keys encrypted at rest.</span></li>
+                <li>@Chk() <span><b>Define-anything data model</b> — search and add reference values inline without leaving the screen.</span></li>
+            </ul>
+        </div>
+        <div class="mk-preview">
+            <img src="~/img/preview-dashboard.svg" alt="Dermalytics report preview"/>
+        </div>
+    </div>
+</section>
+
+<!-- BRAND POSITIONING -->
+<section class="mk-section alt">
+    <div class="mk-wrap">
+        <div class="mk-brandbox">
+            <div class="k" style="color:var(--teal-400);font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase">Brand positioning</div>
+            <h2>Why <span class="name">MindAeon Dermalytics™</span></h2>
+            <p style="max-width:640px;color:#c4d3e6;font-size:15.5px;line-height:1.6">A distinctive, ownable name that fuses dermatology with data analytics — engineered for scientific credibility and commercial scale.</p>
+            <ul>
+                <li>@ChkT() <span>“Dermalytics” is original and highly brandable — dermatology + analytics in a single word.</span></li>
+                <li>@ChkT() <span>Conveys a scientific, enterprise-grade impression to investors and clinicians alike.</span></li>
+                <li>@ChkT() <span>Easily extensible into a modular product family under one identity.</span></li>
+                <li>@ChkT() <span>Strong positioning for investor decks, academic work and commercial marketing.</span></li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- SECURITY -->
+<section class="mk-section" id="security">
+    <div class="mk-wrap">
+        <div class="mk-head">
+            <div class="k">Enterprise &amp; security</div>
+            <h2>Built for regulated, on-premise deployment</h2>
+        </div>
+        <div class="mk-cards">
+            <div class="mk-card"><h3>Role-based access</h3><p>Admin, Clinician and Reviewer roles with authenticated, auditable access.</p></div>
+            <div class="mk-card"><h3>Encrypted secrets</h3><p>Provider API keys are encrypted at rest with ASP.NET Data Protection.</p></div>
+            <div class="mk-card"><h3>Your infrastructure</h3><p>Windows IIS + MS SQL Server; deploy on-premise or in your private cloud.</p></div>
+            <div class="mk-card"><h3>Bring your own LLM</h3><p>Point the platform at your own OpenAI-compatible LLM server — data stays in your control.</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="mk-cta">
+    <div class="mk-wrap">
+        <h2>Enter the MindAeon Dermalytics™ platform</h2>
+        <p>Sign in to run a multimodal assessment, or open the labelled synthetic example report to see the full output.</p>
+        <div class="mk-cta-row" style="justify-content:center">
+            <a class="mk-btn mk-btn-primary" asp-controller="Account" asp-action="Login">Sign in</a>
+            <a class="mk-btn mk-btn-ghost" asp-controller="Account" asp-action="Login">View example report</a>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="mk-footer">
+    <div class="mk-wrap">
+        <div class="row">
+            <img src="~/img/logo-mark.svg" width="34" height="34" alt="logo"/>
+            <span class="name">MindAeon Dermalytics™</span>
+            <span>· AI-Powered Multimodal Skin Biology Intelligence</span>
+            <div style="flex:1"></div>
+            <span>© @DateTime.UtcNow.Year MindAeon</span>
+        </div>
+        <div class="disc">
+            This platform is intended for research-use and cosmetic skin-biology interpretation only. It is not a medical diagnosis,
+            does not replace dermatological examination, and should be interpreted together with standardized imaging, validated
+            assays, clinical evaluation and longitudinal follow-up.
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>
+
+@functions {
+    static Microsoft.AspNetCore.Html.IHtmlContent Ico() =>
+        new Microsoft.AspNetCore.Html.HtmlString("<svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.6'><path d='M20 6 9 17l-5-5'/></svg>");
+    static Microsoft.AspNetCore.Html.IHtmlContent Chk() =>
+        new Microsoft.AspNetCore.Html.HtmlString("<svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.4'><circle cx='12' cy='12' r='10' stroke-opacity='.25'/><path d='M8 12l3 3 5-6'/></svg>");
+    static Microsoft.AspNetCore.Html.IHtmlContent ChkT() =>
+        new Microsoft.AspNetCore.Html.HtmlString("<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.6'><path d='M20 6 9 17l-5-5'/></svg>");
+}

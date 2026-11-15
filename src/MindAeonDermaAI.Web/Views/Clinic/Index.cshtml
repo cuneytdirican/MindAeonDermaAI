@@ -1,0 +1,115 @@
+@using MindAeonDermaAI.Web.Controllers
+@model ClinicVm
+@{
+    ViewData["Title"] = "Clinic Dashboard";
+
+    // Meter scaling relative to the largest group in each distribution.
+    var interMax = Model.Interventions.Count > 0 ? Model.Interventions.Max(x => x.Count) : 0;
+    var clinMax = Model.Clinicians.Count > 0 ? Model.Clinicians.Max(x => x.Count) : 0;
+}
+
+<div class="page-head">
+    <div>
+        <h1 style="margin-bottom:2px">Clinic Dashboard</h1>
+        <div class="muted">Clinic performance overview · Research use — non-diagnostic</div>
+    </div>
+</div>
+
+<div class="grid cols-4 mb-3">
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@Model.SubjectCount</div><div class="l">Subjects</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></div>
+    </div></div>
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@Model.AssessmentCount</div><div class="l">Assessments</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h6"/></svg></div>
+    </div></div>
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@Model.AnalyzedCount</div><div class="l">Analyzed</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></div>
+    </div></div>
+    <div class="card"><div class="card-b flex between items-center">
+        <div class="kpi"><div class="v">@(Model.AvgIntegratedScore.HasValue ? Model.AvgIntegratedScore.Value.ToString("0.0") : "—")</div><div class="l">Avg skin score</div></div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 12l4-2"/></svg></div>
+    </div></div>
+</div>
+
+<div class="grid cols-2 mb-3">
+    <div class="card">
+        <div class="card-h"><h3>Outcome by intervention category</h3></div>
+        <div class="card-b">
+            @if (Model.Interventions.Count == 0)
+            {
+                <p class="muted">No analyzed assessments yet.</p>
+            }
+            else
+            {
+                @foreach (var i in Model.Interventions)
+                {
+                    var pct = interMax > 0 ? (int)Math.Round(100.0 * i.Count / interMax) : 0;
+                    <div class="mb-3">
+                        <div class="flex between mb-2"><span style="font-weight:600">@i.Name</span><span class="muted">@i.Count · avg @i.AvgIntegrated.ToString("0.0")</span></div>
+                        <div class="meter"><span style="width:@(pct)%"></span></div>
+                    </div>
+                }
+                <p class="hint mt-2">Bars scale to the busiest category. Averages are integrated skin-quality scores (illustrative, non-diagnostic).</p>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-h"><h3>Clinician throughput</h3></div>
+        <div class="card-b">
+            @if (Model.Clinicians.Count == 0)
+            {
+                <p class="muted">No analyzed assessments yet.</p>
+            }
+            else
+            {
+                @foreach (var c in Model.Clinicians)
+                {
+                    var pct = clinMax > 0 ? (int)Math.Round(100.0 * c.Count / clinMax) : 0;
+                    <div class="mb-3">
+                        <div class="flex between mb-2"><span style="font-weight:600">@c.Label</span><span class="muted">@c.Count · avg @c.AvgIntegrated.ToString("0.0")</span></div>
+                        <div class="meter"><span style="width:@(pct)%"></span></div>
+                    </div>
+                }
+                <p class="hint mt-2">Throughput counts analyzed assessments per clinician (labelled by short user id).</p>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-h"><h3>Recent reports</h3><div class="spacer"></div><span class="muted" style="font-size:12.5px">Latest 8 analyzed assessments</span></div>
+    <div class="card-b" style="padding:0">
+        @if (Model.Recent.Count == 0)
+        {
+            <div class="empty">
+                <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 10h8M8 14h5"/></svg>
+                <p class="mt-2">No analyzed assessments yet.</p>
+            </div>
+        }
+        else
+        {
+            <table class="table">
+                <thead><tr><th>Subject</th><th>Panel</th><th>Phenotype</th><th class="num">Integrated</th><th>Date</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var r in Model.Recent)
+                {
+                    <tr>
+                        <td><strong>@r.SubjectCode</strong></td>
+                        <td class="muted">@r.Panel</td>
+                        <td class="muted">@r.Phenotype</td>
+                        <td class="num">@r.Integrated.ToString("0.0")</td>
+                        <td class="muted">@r.Date.ToString("yyyy-MM-dd")</td>
+                        <td><a class="btn btn-ghost btn-sm" asp-controller="Assessments" asp-action="Report" asp-route-id="@r.AssessmentId">Report</a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<p class="muted mt-3" style="font-size:12px">Research-use dashboard. Figures are illustrative and non-diagnostic; not a validated clinical output.</p>

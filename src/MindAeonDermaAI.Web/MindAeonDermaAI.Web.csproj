@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\MindAeonDermaAI.Core\MindAeonDermaAI.Core.csproj" />
+    <ProjectReference Include="..\MindAeonDermaAI.Infrastructure\MindAeonDermaAI.Infrastructure.csproj" />
+    <ProjectReference Include="..\MindAeonDermaAI.Analysis\MindAeonDermaAI.Analysis.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="QuestPDF" Version="2025.7.0" />
+    <PackageReference Include="ScottPlot" Version="5.1.59" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>05cbb96d-72c2-40fc-a39a-a7538edcc10a</UserSecretsId>
+  </PropertyGroup>
+
+</Project>

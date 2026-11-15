@@ -1,0 +1,297 @@
+@{
+    ViewData["Title"] = "Skin Scan Studio";
+}
+<div class="page-head">
+    <h1>Skin Scan Studio</h1>
+    <span class="badge badge-teal">Live capture</span>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-action="Index">All assessments</a>
+</div>
+
+<div class="studio">
+    <div>
+        <div class="stage" id="stage">
+            <video id="video" autoplay playsinline muted></video>
+            <img class="shot" id="shot" style="display:none" alt="capture"/>
+            <div class="overlay-zones" id="zones"></div>
+            <div class="guide"><div class="oval"></div></div>
+            <div class="facechip">✓ Face aligned</div>
+            <div class="scanline"></div>
+            <div class="hud">
+                <span class="dot" id="statusDot"></span><span id="statusText">Camera off</span>
+                <span id="qualityReadout" style="margin-left:8px;font-weight:700"></span>
+                <div class="lightbar" title="Lighting quality"><span>Lighting</span><div class="track"><i id="lightFill"></i></div></div>
+            </div>
+        </div>
+        <div class="studio-controls">
+            <button class="btn btn-primary" id="startBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7zM1 5h15v14H1z"/></svg> Start camera
+            </button>
+            <button class="btn btn-dark" id="captureBtn" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="4"/><path d="M4 7h3l2-2h6l2 2h3v12H4z"/></svg> Capture &amp; Analyze
+            </button>
+            <button class="btn btn-ghost" id="retakeBtn" style="display:none">Retake</button>
+        </div>
+        <div class="disclaimer">Live, non-diagnostic screening. With a vision AI provider the frame is analyzed by the model; otherwise an on-device preliminary estimate is shown. Nothing is uploaded to third parties beyond your configured AI provider.</div>
+    </div>
+
+    <div class="card">
+        <div class="card-b">
+            <div id="intro">
+                <h3 style="margin-top:0">How it works</h3>
+                <ol class="muted" style="padding-left:18px;line-height:1.9;font-size:13.5px">
+                    <li>Click <b>Start camera</b> and align your face in the oval.</li>
+                    <li>Wait for the <b>lighting bar</b> to turn green.</li>
+                    <li>Hit <b>Capture &amp; Analyze</b> — scores + a regional heatmap appear on your photo.</li>
+                    <li>Open the full assessment to add biomarkers and generate the report.</li>
+                </ol>
+                <div class="alert alert-info" style="margin-top:8px">Tip: even, front lighting and a neutral expression give the most reliable scores.</div>
+            </div>
+
+            <div class="studio-result" id="result">
+                <div style="text-align:center">
+                    <div class="ring" id="ring"><div class="rv"><b id="overall">0</b><div class="muted" style="font-size:11px;margin-top:-4px">/100 overall</div></div></div>
+                    <div id="resultMsg" class="badge badge-ok mt-2"></div>
+                </div>
+                <div class="mt-4" id="metrics"></div>
+                <div id="summary" class="muted" style="font-size:13px;line-height:1.5;margin-top:6px"></div>
+
+                <div class="mt-4" style="border-top:1px solid var(--line);padding-top:14px">
+                    <div class="flex between items-center mb-2">
+                        <div style="font-weight:700;color:var(--navy-800)">Digital-twin · 12-week outlook</div>
+                        <select id="projSelect" class="input btn-sm" style="width:auto"></select>
+                    </div>
+                    <canvas id="projChart" height="130"></canvas>
+                    <div class="hint">Illustrative projection of overall score under the selected support category. Non-diagnostic — not a guarantee of outcome.</div>
+                </div>
+
+                <div class="flex gap-2 mt-4">
+                    <a class="btn btn-primary" id="openBtn">Open full assessment</a>
+                    <button class="btn btn-ghost" id="speakBtn" type="button">🔊 Read aloud</button>
+                    <button class="btn btn-ghost" id="newBtn" type="button">New scan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const stage = document.getElementById('stage'), video = document.getElementById('video'), shot = document.getElementById('shot');
+  const startBtn = document.getElementById('startBtn'), captureBtn = document.getElementById('captureBtn'), retakeBtn = document.getElementById('retakeBtn');
+  const statusDot = document.getElementById('statusDot'), statusText = document.getElementById('statusText'), lightFill = document.getElementById('lightFill');
+  const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+  const captureUrl = '@Url.Action("ScanCapture","Assessments")';
+  const zonesEl = document.getElementById('zones');
+  let stream = null, lightTimer = null, faceDetector = null, aligned = false, detecting = false, lastMetrics = { brightness:60, redness:0.15, sharpness:55, colorfulness:34 };
+
+  // Relative zone positions on the stage (cx%, cy%, w%, h%) aligned to the face oval.
+  const ZP = {
+    FOREHEAD:[50,25,40,15], PERIORBITAL:[50,40,50,12], CHEEK_L:[35,57,22,20], CHEEK_R:[65,57,22,20],
+    TZONE:[50,52,13,30], PERIORAL:[50,71,30,13], CHIN:[50,85,22,13]
+  };
+  function heat(v){ v = Math.max(0, Math.min(100, v||0)); return `hsl(${Math.round(v*1.2)} 70% 50%)`; }
+
+  async function start(){
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user', width:{ideal:1280}, height:{ideal:960} }, audio:false });
+      video.srcObject = stream; video.style.display=''; shot.style.display='none'; stage.classList.remove('revealed');
+      stage.classList.add('scanning'); statusDot.classList.add('live'); statusText.textContent='Live';
+      captureBtn.disabled=false; startBtn.style.display='none'; retakeBtn.style.display='none';
+      if ('FaceDetector' in window) { try { faceDetector = new FaceDetector({ fastMode:true, maxDetectedFaces:1 }); statusText.textContent='Align your face'; } catch(_) { faceDetector=null; } }
+      lightTimer = setInterval(tick, 400);
+    } catch(e){ alert('Could not access the camera. Please allow camera permission (and use HTTPS).'); }
+  }
+
+  function tick(){ sampleLight(); detectFace(); }
+  async function detectFace(){
+    if (!faceDetector || detecting || video.readyState < 2) return;
+    detecting = true;
+    try {
+      const faces = await faceDetector.detect(video);
+      let ok = false;
+      if (faces && faces.length) {
+        const b = faces[0].boundingBox, vw = video.videoWidth || 1, vh = video.videoHeight || 1;
+        const cx = (b.x + b.width/2)/vw, cy = (b.y + b.height/2)/vh, sw = b.width/vw;
+        ok = cx > 0.3 && cx < 0.7 && cy > 0.22 && cy < 0.78 && sw > 0.18 && sw < 0.78;
+      }
+      if (ok !== aligned) { aligned = ok; stage.classList.toggle('aligned', ok); statusText.textContent = ok ? 'Face detected — hold still' : 'Align your face'; }
+    } catch(_) {}
+    detecting = false;
+  }
+
+  const sc = document.createElement('canvas'); sc.width=160; sc.height=120; const sctx = sc.getContext('2d', { willReadFrequently:true });
+  function frameMetrics(){
+    sctx.drawImage(video, 0, 0, sc.width, sc.height);
+    const d = sctx.getImageData(0,0,sc.width,sc.height).data;
+    let sum=0, r=0, redEx=0, edge=0, prev=0, chSpread=0;
+    for (let i=0;i<d.length;i+=4){
+      const R=d[i],G=d[i+1],B=d[i+2], lum=(R*0.299+G*0.587+B*0.114);
+      sum+=lum; r+=R; redEx += Math.max(0, R-(G+B)/2);
+      edge += Math.abs(lum-prev); prev=lum; chSpread += Math.abs(R-G)+Math.abs(G-B);
+    }
+    const px=d.length/4;
+    return {
+      brightness: Math.min(100, (sum/px)/255*100),
+      redness: Math.min(1, (redEx/px)/90),
+      sharpness: Math.min(100, (edge/px)/6*100),
+      colorfulness: Math.min(100, (chSpread/px)/120*100)
+    };
+  }
+  function sampleLight(){
+    if (video.readyState < 2) return;
+    const m = frameMetrics(); lastMetrics = m; window.__lastMetrics = m; // shared with the MediaPipe module
+    // Good lighting ~ bright enough but not blown out.
+    const q = Math.max(0, 100 - Math.abs(m.brightness-62)*1.8);
+    lightFill.style.width = q + '%';
+  }
+
+  function capture(){
+    const w = video.videoWidth || 1280, h = video.videoHeight || 960;
+    const cnv = document.createElement('canvas'); cnv.width=w; cnv.height=h; const cx=cnv.getContext('2d');
+    cx.translate(w,0); cx.scale(-1,1);           // mirror to match the preview the user framed
+    cx.drawImage(video, 0, 0, w, h);
+    lastMetrics = frameMetrics();
+    cnv.toBlob(async blob => {
+      shot.src = URL.createObjectURL(blob); shot.style.display=''; video.style.display='none';
+      stage.classList.remove('scanning'); stage.classList.remove('aligned'); statusText.textContent='Analyzing…'; captureBtn.disabled=true;
+      const fd = new FormData();
+      fd.append('image', blob, 'scan.jpg');
+      fd.append('brightness', lastMetrics.brightness.toFixed(1));
+      fd.append('redness', lastMetrics.redness.toFixed(3));
+      fd.append('sharpness', lastMetrics.sharpness.toFixed(1));
+      fd.append('colorfulness', lastMetrics.colorfulness.toFixed(1));
+      const g = window.__geo || {};
+      ['symmetry','jawline','thirds','fifths','yaw','quality'].forEach(k => { if (g[k] != null) fd.append(k, (+g[k]).toFixed(1)); });
+      if (g.eyesOpen != null) fd.append('eyesOpen', g.eyesOpen);
+      if (g.facePresent != null) fd.append('facePresent', g.facePresent);
+      try {
+        const res = await fetch(captureUrl, { method:'POST', headers:{ 'RequestVerificationToken': token }, body: fd });
+        const data = await res.json(); reveal(data);
+      } catch(e){ statusText.textContent='Error'; alert('Analysis failed.'); captureBtn.disabled=false; }
+      stopCam();
+    }, 'image/jpeg', 0.92);
+  }
+
+  function stopCam(){ if (lightTimer) clearInterval(lightTimer); if (stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } }
+
+  let lastSummary = '';
+  function reveal(data){
+    statusText.textContent='Done'; statusDot.classList.remove('live');
+    // draw zone blobs + labels on the still
+    zonesEl.innerHTML='';
+    (data.zones||[]).forEach(z => {
+      const p = ZP[z.code]; if (!p) return;
+      const blob = document.createElement('div'); blob.className='zoneblob';
+      blob.style.left=p[0]+'%'; blob.style.top=p[1]+'%'; blob.style.width=p[2]+'%'; blob.style.height=p[3]+'%';
+      blob.style.background=heat(z.overall);
+      zonesEl.appendChild(blob);
+      const lab = document.createElement('div'); lab.className='zonelabel';
+      lab.style.left=p[0]+'%'; lab.style.top=p[1]+'%'; lab.textContent=Math.round(z.overall||0);
+      zonesEl.appendChild(lab);
+    });
+    stage.classList.add('revealed');
+
+    // right-side result
+    document.getElementById('intro').style.display='none';
+    document.getElementById('result').classList.add('show');
+    const s = data.scores || {};
+    const ring = document.getElementById('ring'); const ov = Math.round(s.overall||0);
+    let cur=0; const anim = setInterval(()=>{ cur += Math.max(1,Math.round(ov/25)); if(cur>=ov){cur=ov; clearInterval(anim);} ring.style.setProperty('--p',cur); document.getElementById('overall').textContent=cur; }, 24);
+
+    const rows = [['Hydration',s.hydration],['Texture',s.texture],['Elasticity',s.elasticity],['Wrinkle smoothness',s.wrinkle],
+      ['Pigmentation',s.pigmentation],['Redness (health)',s.rednessHealth],['Pore refinement',s.pore],['Brightness',s.brightness]];
+    const mHtml = rows.map(r=>`<div class="metric-row"><div class="ml">${r[0]}</div><div class="mt"><i data-w="${Math.round(r[1]||0)}"></i></div><div class="mv">${Math.round(r[1]||0)}</div></div>`).join('');
+    document.getElementById('metrics').innerHTML = mHtml;
+    setTimeout(()=>document.querySelectorAll('#metrics .mt > i').forEach(i=>i.style.width=i.dataset.w+'%'), 60);
+
+    const zs = (data.zones||[]).filter(z=>z.overall!=null);
+    const best = zs.slice().sort((a,b)=>b.overall-a.overall)[0], worst = zs.slice().sort((a,b)=>a.overall-b.overall)[0];
+    const msg = document.getElementById('resultMsg'); msg.textContent = data.aiUsed ? 'Analyzed by vision AI' : 'On-device preliminary'; msg.className = 'badge mt-2 ' + (data.aiUsed?'badge-ok':'badge-warn');
+    lastSummary = `Overall skin quality is ${ov} out of 100.` + (best&&worst ? ` The ${best.name} area looks strongest, while the ${worst.name} area may benefit from the most attention.` : '') + ` This is a non-diagnostic screening.`;
+    document.getElementById('summary').textContent = lastSummary + (data.aiUsed ? '' : ' Configure a vision AI provider for full-accuracy scoring.');
+    document.getElementById('openBtn').href = '@Url.Action("Details","Assessments")/' + data.assessmentId;
+    setupProjection(s);
+    retakeBtn.style.display='';
+  }
+
+  // ---- Digital-twin 12-week outlook (client-side, illustrative) ----
+  let projChart = null;
+  const CATS = [
+    { name:'Barrier / hydration cream', resp:s => 40 + (100-(s.hydration||60))*0.4 + (100-(s.rednessHealth||60))*0.2 },
+    { name:'Peptide serum', resp:s => 40 + (100-(s.wrinkle||60))*0.5 },
+    { name:'Retinoid', resp:s => 35 + (100-(s.wrinkle||60))*0.4 + (100-(s.texture||60))*0.2 },
+    { name:'Antioxidant serum', resp:s => 35 + (100-(s.rednessHealth||60))*0.4 },
+    { name:'Growth-factor serum', resp:s => 35 + (100-(s.elasticity||60))*0.4 },
+    { name:'Daily sunscreen (preventive)', resp:_ => 45 }
+  ];
+  function traj(base, resp){ const mg = 4 + Math.min(100,Math.max(0,resp))/100*16; const ceil = Math.min(96, base+mg);
+    const a=[]; for (let w=0; w<=12; w++) a.push(Math.round((base+(ceil-base)*(1-Math.exp(-0.28*w)))*10)/10); return a; }
+  function setupProjection(s){
+    if (typeof Chart === 'undefined') return;
+    const sel = document.getElementById('projSelect'); sel.innerHTML='';
+    CATS.forEach((c,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=c.name; sel.appendChild(o); });
+    const base = s.overall || 60;
+    function draw(){
+      const c = CATS[parseInt(sel.value)||0]; const data = traj(base, c.resp(s));
+      const labels = Array.from({length:13}, (_,w)=>'W'+w);
+      if (projChart) projChart.destroy();
+      projChart = new Chart(document.getElementById('projChart'), { type:'line',
+        data:{ labels, datasets:[{ label:c.name, data, borderColor:'#0b7285', backgroundColor:'rgba(18,165,148,.14)', fill:true, tension:.35, pointRadius:2, borderWidth:2.4 }] },
+        options:{ plugins:{ legend:{ display:false } }, animation:{ duration:1000 },
+          scales:{ y:{ suggestedMin:Math.max(0, base-6), suggestedMax:100, title:{ display:true, text:'Overall' } }, x:{ title:{ display:true, text:'Weeks' } } } } });
+    }
+    sel.onchange = draw; draw();
+  }
+
+  function speak(){ if(!('speechSynthesis' in window)||!lastSummary) return; speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(lastSummary)); }
+
+  startBtn.addEventListener('click', start);
+  captureBtn.addEventListener('click', capture);
+  retakeBtn.addEventListener('click', ()=>{ document.getElementById('result').classList.remove('show'); document.getElementById('intro').style.display=''; zonesEl.innerHTML=''; stage.classList.remove('revealed'); start(); });
+  document.getElementById('newBtn').addEventListener('click', ()=>location.reload());
+  document.getElementById('speakBtn').addEventListener('click', speak);
+  window.addEventListener('beforeunload', stopCam);
+})();
+</script>
+<script type="module">
+// Progressive enhancement: in-browser facial landmarks (MediaPipe FaceMesh) → geometry + capture quality.
+// If it fails to load, the scan still works fully without geometry.
+try {
+  const { FaceLandmarker, FilesetResolver } = await import("https://cdn.jsdelivr.net/npm/@@mediapipe/tasks-vision@0.10.14");
+  const fileset = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@@mediapipe/tasks-vision@0.10.14/wasm");
+  const lm = await FaceLandmarker.createFromOptions(fileset, {
+    baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task" },
+    runningMode: "VIDEO", numFaces: 1
+  });
+  const video = document.getElementById('video');
+  const readout = document.getElementById('qualityReadout');
+  const D = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  function loop() {
+    requestAnimationFrame(loop);
+    if (!video || video.readyState < 2 || video.style.display === 'none') return;
+    let res; try { res = lm.detectForVideo(video, performance.now()); } catch (_) { return; }
+    const f = res && res.faceLandmarks && res.faceLandmarks[0];
+    if (!f) { window.__geo = { facePresent: false, quality: 0 }; if (readout) readout.textContent = 'No face'; return; }
+    const nose = f[1], le = f[33], re = f[263], chin = f[152], jl = f[172], jr = f[397];
+    const dl = D(le, nose), dr = D(re, nose);
+    const symmetry = Math.max(0, 100 - Math.abs(dl - dr) / ((dl + dr) / 2 || 1) * 180);
+    const midx = (f[234].x + f[454].x) / 2, yaw = (nose.x - midx) * 180;
+    const t1 = f[168].y - f[10].y, t2 = f[2].y - f[168].y, t3 = chin.y - f[2].y, mn = (t1 + t2 + t3) / 3 || 1;
+    const thirds = Math.max(0, 100 - (Math.abs(t1 - mn) + Math.abs(t2 - mn) + Math.abs(t3 - mn)) / mn * 100);
+    const a1 = Math.atan2(jl.y - chin.y, jl.x - chin.x), a2 = Math.atan2(jr.y - chin.y, jr.x - chin.x);
+    let jaw = Math.abs((a1 - a2) * 180 / Math.PI); if (jaw > 180) jaw = 360 - jaw;
+    const ear = D(f[159], f[145]) / Math.max(1e-4, D(f[33], f[133])), eyesOpen = ear > 0.12;
+    const m = window.__lastMetrics || { sharpness: 55, brightness: 60 };
+    let q = 40 + Math.min(30, m.sharpness * 0.3) + (Math.abs(m.brightness - 62) < 25 ? 15 : 0) + (eyesOpen ? 10 : 0) + (Math.abs(yaw) < 12 ? 5 : 0);
+    q = Math.max(0, Math.min(100, q));
+    window.__geo = { facePresent: true, symmetry: Math.round(symmetry), yaw: Math.round(yaw), thirds: Math.round(thirds), fifths: Math.round(symmetry), jawline: Math.round(jaw), eyesOpen, quality: Math.round(q) };
+    if (readout) readout.textContent = 'Quality ' + Math.round(q) + '% · ' + (q >= 55 && eyesOpen ? 'Analysis Ready' : 'Adjust');
+  }
+  loop();
+} catch (e) { /* MediaPipe unavailable — geometry disabled, scan unaffected */ }
+</script>
+}

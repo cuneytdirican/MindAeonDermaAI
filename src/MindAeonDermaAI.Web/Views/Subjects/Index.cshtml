@@ -1,0 +1,61 @@
+@model IReadOnlyList<MindAeonDermaAI.Web.Controllers.SubjectRowViewModel>
+@{
+    ViewData["Title"] = "Subjects";
+}
+
+<div class="page-head">
+    <h1>Subjects</h1>
+    <div class="spacer"></div>
+    <a class="btn btn-primary" asp-controller="Subjects" asp-action="Create">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        New subject
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-b" style="padding:0">
+        @if (Model.Count == 0)
+        {
+            <div class="empty">
+                <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                <p class="mt-2">No subjects yet. Register your first subject to get started.</p>
+                <a class="btn btn-primary btn-sm" asp-controller="Subjects" asp-action="Create">New subject</a>
+            </div>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th class="num">Age</th>
+                        <th>Sex</th>
+                        <th>Skin type</th>
+                        <th class="num">Assessments</th>
+                        <th>Created</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var s in Model)
+                {
+                    <tr>
+                        <td><strong>@s.Code</strong></td>
+                        <td>@(string.IsNullOrEmpty(s.DisplayName) ? "—" : s.DisplayName)</td>
+                        <td class="num">@(s.Age?.ToString() ?? "—")</td>
+                        <td>@(s.SexName ?? "—")</td>
+                        <td>@(s.SkinTypeName ?? "—")</td>
+                        <td class="num"><span class="badge badge-navy">@s.AssessmentCount</span></td>
+                        <td class="muted">@s.CreatedAtUtc.ToString("yyyy-MM-dd")</td>
+                        <td class="num">
+                            <a class="btn btn-ghost btn-sm" asp-controller="Subjects" asp-action="Details" asp-route-id="@s.Id">Open</a>
+                            <a class="btn btn-dark btn-sm" asp-controller="Assessments" asp-action="Create" asp-route-subjectId="@s.Id">New assessment</a>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

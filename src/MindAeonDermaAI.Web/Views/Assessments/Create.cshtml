@@ -1,0 +1,131 @@
+@model AssessmentCreateViewModel
+@using MindAeonDermaAI.Core.Enums
+@{
+    ViewData["Title"] = "New assessment";
+}
+<div class="page-head">
+    <h1>New assessment</h1>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-action="Index">Cancel</a>
+</div>
+
+<div class="steps">
+    <div class="step active"><span class="n">1</span> Subject &amp; context</div>
+    <div class="step active"><span class="n">2</span> Images</div>
+    <div class="step active"><span class="n">3</span> Protein biomarkers</div>
+    <div class="step"><span class="n">4</span> Analyze</div>
+</div>
+
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    <div asp-validation-summary="ModelOnly" class="alert alert-err" style="@(ViewData.ModelState.ErrorCount == 0 ? "display:none" : "")"></div>
+
+    <div class="grid cols-2 mb-3">
+        <div class="card">
+            <div class="card-h"><h3>Subject &amp; context</h3></div>
+            <div class="card-b">
+                <div class="field">
+                    <label>Subject</label>
+                    <div class="flex gap-2">
+                        <select class="input" name="SubjectId">
+                            @foreach (var s in Model.Subjects)
+                            {
+                                <option value="@s.Id" selected="@(s.Id == Model.SubjectId)">@s.Label</option>
+                            }
+                        </select>
+                        <a class="btn btn-ghost" asp-controller="Subjects" asp-action="Create" title="Create a new subject">＋</a>
+                    </div>
+                    <span asp-validation-for="SubjectId" class="text-danger"></span>
+                </div>
+                <div class="field">
+                    <label>Intervention / product category</label>
+                    @await Html.PartialAsync("_SmartSelect", new MindAeonDermaAI.Web.Models.SmartSelectModel
+                    {
+                        FieldName = "InterventionCategoryId", Entity = "interventionCategory",
+                        Placeholder = "Select intervention category"
+                    })
+                    <div class="hint">Choose from the list, or define a new category inline.</div>
+                </div>
+                <div class="field">
+                    <label>Timepoint</label>
+                    <select class="input" asp-for="TimePoint" asp-items="Html.GetEnumSelectList<TimePointType>()"></select>
+                </div>
+                <div class="row-2">
+                    <div class="field"><label>Assay batch <span class="muted">(optional)</span></label><input class="input" asp-for="AssayBatch" placeholder="e.g. BATCH-2406A" /></div>
+                    <div class="field"><label>UV index <span class="muted">(0–11)</span></label><input class="input" type="number" step="any" asp-for="ExposomeUvIndex" placeholder="—" /></div>
+                </div>
+                <div class="row-2">
+                    <div class="field"><label>Air PM2.5 <span class="muted">(µg/m³)</span></label><input class="input" type="number" step="any" asp-for="ExposomePm25" placeholder="—" /></div>
+                    <div class="field"><label>Humidity <span class="muted">(%)</span></label><input class="input" type="number" step="any" asp-for="ExposomeHumidity" placeholder="—" /></div>
+                </div>
+                <div class="hint">Assay batch enables drift monitoring; UV / PM2.5 / humidity feed the environmental exposome burden.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-h"><h3>Skin images</h3></div>
+            <div class="card-b">
+                <div class="field">
+                    <label>Upload one or more skin / face photographs</label>
+                    <input class="input" type="file" name="images" accept="image/*" multiple />
+                    <div class="hint">Images are analyzed by the configured vision model to produce standardized 0–100 appearance scores. Optional — you can add them now or later.</div>
+                </div>
+                <div class="alert alert-info" style="margin:0">
+                    For best results use even lighting, no makeup or filters, and a standard frontal angle.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-h"><h3>Protein biomarkers</h3><span class="badge badge-muted">Leave blank if not measured</span></div>
+        <div class="card-b">
+            <p class="muted mt-0">Enter measured values in the marker's unit. Blank fields are treated as missing and handled by available-data modeling.</p>
+            @foreach (var g in Model.Domains)
+            {
+                <h4 style="margin-top:14px">@g.Domain</h4>
+                <div class="grid cols-3">
+                    @foreach (var b in g.Biomarkers)
+                    {
+                        <div class="field">
+                            <label>@b.Name</label>
+                            <div class="flex gap-2 items-center">
+                                <input class="input" type="number" step="any" name="values[@b.Id]" placeholder="—" />
+                                <span class="muted" style="font-size:12px;white-space:nowrap">@b.Unit</span>
+                            </div>
+                            <div class="hint">Young ref ≈ @b.YoungMean.ToString("0.#")</div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-h"><h3>Instrumental / multi-omics readings</h3><span class="badge badge-muted">Optional</span></div>
+        <div class="card-b">
+            <p class="muted mt-0">Device measures (TEWL, corneometry, cutometer elasticity, …). Select the instrument and enter its value; leave rows blank to skip.</p>
+            @for (int i = 0; i < 3; i++)
+            {
+                <div class="row-2">
+                    <div class="field">
+                        <label>Instrument</label>
+                        @await Html.PartialAsync("_SmartSelect", new MindAeonDermaAI.Web.Models.SmartSelectModel
+                        {
+                            FieldName = "instrumentTypeIds", Entity = "instrumentType", Placeholder = "Select instrument (optional)"
+                        })
+                    </div>
+                    <div class="field"><label>Value</label><input class="input" type="number" step="any" name="instrumentValues" placeholder="—" /></div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="flex gap-2 mt-4">
+        <button class="btn btn-primary" type="submit">Create assessment</button>
+        <a class="btn btn-ghost" asp-action="Index">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

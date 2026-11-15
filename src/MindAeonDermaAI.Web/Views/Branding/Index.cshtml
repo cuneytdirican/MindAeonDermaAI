@@ -1,0 +1,43 @@
+@model MindAeonDermaAI.Core.Entities.BrandingSettings
+@{
+    ViewData["Title"] = "Branding";
+}
+<div class="page-head">
+    <h1>White-label branding</h1>
+    <div class="spacer"></div>
+</div>
+
+<form asp-action="Index" method="post">
+    <input type="hidden" asp-for="Id" />
+    <div class="grid cols-2">
+        <div class="card"><div class="card-h"><h3>Identity</h3></div>
+            <div class="card-b">
+                <div class="field"><label>Product name</label><input class="input" asp-for="ProductName" /></div>
+                <div class="field"><label>Tagline</label><input class="input" asp-for="Tagline" /></div>
+                <div class="row-2">
+                    <div class="field"><label>Primary color</label><input class="input" type="color" asp-for="PrimaryColor" style="height:42px;padding:4px" /></div>
+                    <div class="field"><label>Secondary (dark) color</label><input class="input" type="color" asp-for="SecondaryColor" style="height:42px;padding:4px" /></div>
+                </div>
+                <div class="field"><label>Footer note <span class="muted">(optional)</span></label><input class="input" asp-for="FooterNote" placeholder="© Your Clinic — research use only" /></div>
+                <div class="field"><label>Custom logo SVG <span class="muted">(optional inline &lt;svg&gt;…)</span></label>
+                    <textarea class="input" asp-for="LogoSvg" rows="4" placeholder="Leave blank to use the default mark"></textarea>
+                </div>
+                <button class="btn btn-primary" type="submit">Save branding</button>
+            </div>
+        </div>
+        <div class="card"><div class="card-h"><h3>Live preview</h3></div>
+            <div class="card-b">
+                <div style="border:1px solid var(--line);border-radius:14px;overflow:hidden">
+                    <div style="background:@Model.SecondaryColor;color:#fff;padding:18px;display:flex;align-items:center;gap:12px">
+                        <div style="width:40px;height:40px;border-radius:11px;background:@Model.PrimaryColor;display:grid;place-items:center;font-weight:800">◈</div>
+                        <div><div style="font-weight:800">@Model.ProductName</div><div style="font-size:11px;color:@Model.PrimaryColor">@Model.Tagline</div></div>
+                    </div>
+                    <div style="padding:18px;background:#fff">
+                        <button style="background:@Model.PrimaryColor;color:#fff;border:none;border-radius:10px;padding:9px 16px;font-weight:700">Primary button</button>
+                        <div class="muted mt-3" style="font-size:12px">Colors re-theme the whole app (nav, buttons, accents) and the PDF header.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

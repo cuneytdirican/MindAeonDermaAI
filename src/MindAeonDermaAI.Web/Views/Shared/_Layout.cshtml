@@ -1,0 +1,145 @@
+@using System.Security.Claims
+@inject IBrandingService Branding
+@inject IStringLocalizer<SharedResource> Loc
+@{
+    var brand = await Branding.GetAsync();
+    var curCulture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var returnUrl = ViewContext.HttpContext.Request.Path.Value + ViewContext.HttpContext.Request.QueryString.Value;
+    string Active(string c) => string.Equals((string?)ViewContext.RouteData.Values["controller"], c, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+    var user = User;
+    var name = user.FindFirstValue(ClaimTypes.Name) ?? user.Identity?.Name ?? "User";
+    var initials = string.Concat((name ?? "U").Split(' ', '@').Where(s => s.Length > 0).Take(2).Select(s => char.ToUpper(s[0])));
+    var isAdmin = user.IsInRole("Admin");
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · @brand.ProductName</title>
+    <link rel="icon" href="~/img/logo-mark.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>:root{ --teal-500:@brand.PrimaryColor; --teal-600:@brand.PrimaryColor; --navy-800:@brand.SecondaryColor; --navy-900:@brand.SecondaryColor; }</style>
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body>
+@Html.AntiForgeryToken()
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">
+            @if (!string.IsNullOrWhiteSpace(brand.LogoSvg)) { @Html.Raw(brand.LogoSvg) } else { <img src="~/img/logo-mark.svg" width="38" height="38" alt="logo"/> }
+            <div>
+                <div class="name" style="font-size:14px">@brand.ProductName</div>
+                <div class="sub">Skin Intelligence</div>
+            </div>
+        </div>
+        <nav>
+            <ul class="nav">
+                <a class="@Active("Home")" asp-controller="Home" asp-action="Index">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> @Loc["Dashboard"]
+                </a>
+                <li class="group">@Loc["Clinical"]</li>
+                <a class="@Active("Subjects")" asp-controller="Subjects" asp-action="Index">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg> @Loc["Subjects"]
+                </a>
+                <a class="@Active("Assessments")" asp-controller="Assessments" asp-action="Index">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 10h8M8 14h5"/></svg> @Loc["Assessments"]
+                </a>
+                <a asp-controller="Assessments" asp-action="Scan">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><circle cx="12" cy="12" r="3"/></svg> Skin Scan
+                </a>
+                <a asp-controller="Assessments" asp-action="Example">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 21l-4.9 2.6.9-5.5-4-3.9L9.5 8z"/></svg> Example Report
+                </a>
+                <a class="@Active("Assistant")" asp-controller="Assistant" asp-action="Index">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 00-9 9 9 9 0 001.5 5L3 21l4-1.5A9 9 0 1012 3z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg> AI Assistant
+                </a>
+                <a class="@Active("Literature")" asp-controller="Literature" asp-action="Index">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5a2 2 0 012-2h12v18H6a2 2 0 01-2-2z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Literature
+                </a>
+                <a class="@Active("Clinic")" asp-controller="Clinic" asp-action="Index">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V5a2 2 0 012-2h9v18M14 9h5a2 2 0 012 2v10M9 8v.01M9 12v.01M9 16v.01"/></svg> Clinic
+                </a>
+                <a class="@Active("Trial")" asp-controller="Trial" asp-action="Index">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6M10 3v6l-4 9a2 2 0 002 3h8a2 2 0 002-3l-4-9V3"/></svg> Clinical trials
+                </a>
+                @if (isAdmin)
+                {
+                    <li class="group">@Loc["Administration"]</li>
+                    <a class="@Active("Analytics")" asp-controller="Analytics" asp-action="Index">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5M4 19h16M8 16v-5M13 16V8M18 16v-9"/></svg> Analytics
+                    </a>
+                    <a class="@Active("AiProviders")" asp-controller="AiProviders" asp-action="Index">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 014 4v1a4 4 0 010 8v1a4 4 0 01-8 0v-1a4 4 0 010-8V6a4 4 0 014-4z"/></svg> AI Providers
+                    </a>
+                    <a class="@Active("Lookups")" asp-controller="Lookups" asp-action="Index">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg> Reference Data
+                    </a>
+                    <a class="@Active("Branding")" asp-controller="Branding" asp-action="Index">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18 4 4 0 000-8 2 2 0 010-4z"/></svg> Branding
+                    </a>
+                    <a class="@Active("Users")" asp-controller="Users" asp-action="Index">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M17 11l2 2 3-4"/></svg> Users
+                    </a>
+                    <a class="@Active("Compliance")" asp-controller="Compliance" asp-action="Index">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg> Compliance
+                    </a>
+                    <a class="@Active("Audit")" asp-controller="Audit" asp-action="Index">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h6M8 17h4"/></svg> Audit log
+                    </a>
+                    <a class="@Active("Health")" asp-controller="Health" asp-action="Index">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2 6 4-12 2 6h6"/></svg> System health
+                    </a>
+                    <a class="@Active("Export")" asp-controller="Export" asp-action="Index">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M8 11l4 4 4-4M4 21h16"/></svg> Research export
+                    </a>
+                    <a href="/swagger" target="_blank">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/><circle cx="12" cy="12" r="2"/></svg> API docs
+                    </a>
+                }
+            </ul>
+        </nav>
+        <div class="foot">
+            Research use only.<br/>Not a medical diagnosis.
+        </div>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <div class="title">@ViewData["Title"]</div>
+            <div class="spacer"></div>
+            <select class="input btn-sm" style="width:auto;margin-right:10px" title="@Loc["Language"]"
+                    onchange="location.href='@Url.Action("Set", "Culture")?returnUrl=@Uri.EscapeDataString(returnUrl ?? "/")&culture=' + this.value">
+                @foreach (var (code, label) in new[] { ("en", "English"), ("tr", "Türkçe"), ("de", "Deutsch"), ("fr", "Français"), ("es", "Español"), ("ar", "العربية"), ("zh", "中文"), ("ru", "Русский") })
+                {
+                    <option value="@code" selected="@(curCulture == code)">@label</option>
+                }
+            </select>
+            <div class="userchip">
+                <div style="text-align:right">
+                    <div style="font-weight:600;color:var(--navy-800)">@name</div>
+                    <div style="font-size:11.5px">@(isAdmin ? "Administrator" : (User.IsInRole("Clinician") ? "Clinician" : "Reviewer"))</div>
+                </div>
+                <div class="avatar">@initials</div>
+                <form asp-controller="Account" asp-action="Logout" method="post">
+                    <button class="btn btn-ghost btn-sm" type="submit">@Loc["Sign out"]</button>
+                </form>
+            </div>
+        </header>
+        <main class="content">
+            @if (TempData["Ok"] is string ok) { <div class="alert alert-ok">@ok</div> }
+            @if (TempData["Err"] is string err) { <div class="alert alert-err">@err</div> }
+            @RenderBody()
+        </main>
+    </div>
+</div>
+@if (User.Identity?.IsAuthenticated == true && !string.Equals((string?)ViewContext.RouteData.Values["controller"], "Assistant", StringComparison.OrdinalIgnoreCase))
+{
+    <partial name="_AssistantWidget" />
+}
+<script src="~/js/smartselect.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

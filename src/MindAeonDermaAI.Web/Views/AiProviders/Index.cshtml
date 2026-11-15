@@ -1,0 +1,100 @@
+@using MindAeonDermaAI.Core.Entities
+@model List<AiProvider>
+@{
+    ViewData["Title"] = "AI Providers";
+}
+
+<div class="page-head">
+    <h1>AI Providers</h1>
+    <div class="spacer"></div>
+    <a class="btn btn-primary" asp-action="Create">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Add custom provider
+    </a>
+</div>
+
+<div class="alert alert-info">
+    <strong>DeepSeek</strong> ships as the default provider. Add an API key to any listed backend (OpenAI, Anthropic/Claude,
+    Gemini, Azure) to switch it on, or register a <strong>Custom</strong> provider to point at your own OpenAI-compatible LLM
+    server — just supply its base URL, key and model. API keys are encrypted at rest and never shown again.
+</div>
+
+@if (Model.Count == 0)
+{
+    <div class="empty">
+        <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a4 4 0 014 4v1a4 4 0 010 8v1a4 4 0 01-8 0v-1a4 4 0 010-8V6a4 4 0 014-4z"/></svg>
+        <p class="mt-2">No AI providers configured yet.</p>
+        <a class="btn btn-primary btn-sm" asp-action="Create">Add custom provider</a>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-b" style="padding:0">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>Provider</th>
+                    <th>Type</th>
+                    <th>Base URL</th>
+                    <th>Models (chat / vision)</th>
+                    <th>Key</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr>
+                        <td>
+                            <strong>@p.Name</strong>
+                            @if (p.IsDefault) { <span class="badge badge-teal">Default</span> }
+                            @if (p.IsSystem) { <span class="badge badge-muted">System</span> }
+                        </td>
+                        <td>@p.ProviderType</td>
+                        <td class="muted">@(string.IsNullOrEmpty(p.BaseUrl) ? "—" : p.BaseUrl)</td>
+                        <td class="muted">
+                            @(string.IsNullOrEmpty(p.DefaultChatModel) ? "—" : p.DefaultChatModel)
+                            <span style="opacity:.5"> / </span>
+                            @(string.IsNullOrEmpty(p.DefaultVisionModel) ? "—" : p.DefaultVisionModel)
+                        </td>
+                        <td>
+                            @if (p.HasApiKey) { <span class="badge badge-ok">Key set</span> }
+                            else { <span class="badge badge-warn">No key</span> }
+                        </td>
+                        <td>
+                            @if (p.IsEnabled) { <span class="badge badge-ok">Enabled</span> }
+                            else { <span class="badge badge-muted">Disabled</span> }
+                        </td>
+                        <td>
+                            <div class="flex items-center gap-2" style="flex-wrap:wrap;justify-content:flex-end">
+                                <a class="btn btn-ghost btn-sm" asp-action="Edit" asp-route-id="@p.Id">Edit</a>
+                                <form asp-action="Test" asp-route-id="@p.Id" method="post" style="display:inline">
+                                    <button class="btn btn-ghost btn-sm" type="submit">Test</button>
+                                </form>
+                                @if (!p.IsDefault)
+                                {
+                                    <form asp-action="SetDefault" asp-route-id="@p.Id" method="post" style="display:inline">
+                                        <button class="btn btn-ghost btn-sm" type="submit">Set default</button>
+                                    </form>
+                                }
+                                <form asp-action="Toggle" asp-route-id="@p.Id" method="post" style="display:inline">
+                                    <button class="btn btn-ghost btn-sm" type="submit">@(p.IsEnabled ? "Disable" : "Enable")</button>
+                                </form>
+                                @if (!p.IsSystem)
+                                {
+                                    <form asp-action="Delete" asp-route-id="@p.Id" method="post" style="display:inline"
+                                          onsubmit="return confirm('Delete provider “@p.Name”? This cannot be undone.');">
+                                        <button class="btn btn-ghost btn-sm" type="submit" style="color:var(--danger)">Delete</button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

@@ -1,0 +1,113 @@
+@using MindAeonDermaAI.Web.Controllers
+@model AiProviderFormViewModel
+@{
+    ViewData["Title"] = $"Edit · {Model.Name}";
+}
+
+<div class="page-head">
+    <h1>Edit provider</h1>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" asp-action="Index">Back to providers</a>
+</div>
+
+<div class="grid cols-3">
+    <div class="card" style="grid-column: span 2">
+        <div class="card-h"><h3>@Model.Name</h3></div>
+        <div class="card-b">
+            <form asp-action="Edit" method="post">
+                <input type="hidden" asp-for="Id" />
+                <div asp-validation-summary="ModelOnly" class="alert alert-err" style="@(ViewData.ModelState.ErrorCount == 0 ? "display:none" : "")"></div>
+
+                <div class="row-2">
+                    <div class="field">
+                        <label>Provider type</label>
+                        <input class="input" value="@Model.ProviderType" readonly disabled />
+                        <div class="hint">System provider type is fixed.</div>
+                    </div>
+                    <div class="field">
+                        <label asp-for="BaseUrl">Base URL</label>
+                        <input asp-for="BaseUrl" class="input" placeholder="https://api.example.com/v1" />
+                        <span asp-validation-for="BaseUrl" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row-2">
+                    <div class="field">
+                        <label asp-for="DefaultChatModel">Default chat model</label>
+                        <input asp-for="DefaultChatModel" class="input" placeholder="e.g. gpt-4o-mini" />
+                    </div>
+                    <div class="field">
+                        <label asp-for="DefaultVisionModel">Default vision model</label>
+                        <input asp-for="DefaultVisionModel" class="input" placeholder="e.g. gpt-4o" />
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label asp-for="ApiKey">API key</label>
+                    <input asp-for="ApiKey" class="input" type="password" autocomplete="new-password"
+                           placeholder="•••• leave blank to keep" />
+                    <div class="hint">
+                        @if (Model.HasApiKey)
+                        {
+                            <span>A key is currently stored. Enter a new value to replace it, or leave blank to keep it.</span>
+                        }
+                        else
+                        {
+                            <span>No key stored yet. Enter one to enable live calls.</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label asp-for="ExtraHeadersJson">Extra headers (JSON)</label>
+                    <textarea asp-for="ExtraHeadersJson" class="input" rows="3"
+                              placeholder='{ "x-custom-header": "value" }'></textarea>
+                    <div class="hint">Optional JSON object for custom auth headers.</div>
+                </div>
+
+                <div class="field">
+                    <label class="flex items-center gap-2" style="font-weight:500;margin:0">
+                        <input asp-for="IsEnabled" type="checkbox" /> Enabled
+                    </label>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button class="btn btn-primary" type="submit">Save changes</button>
+                    <a class="btn btn-ghost" asp-action="Index">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-h"><h3>Actions</h3></div>
+        <div class="card-b">
+            <div class="field">
+                <label>Key status</label>
+                @if (Model.HasApiKey) { <span class="badge badge-ok">Key set</span> }
+                else { <span class="badge badge-warn">No key</span> }
+            </div>
+
+            <form asp-action="Test" asp-route-id="@Model.Id" method="post" class="mb-2">
+                <button class="btn btn-dark btn-block" type="submit">Test connection</button>
+            </form>
+
+            @if (Model.HasApiKey)
+            {
+                <form asp-action="ClearKey" asp-route-id="@Model.Id" method="post"
+                      onsubmit="return confirm('Remove the stored API key for this provider?');">
+                    <button class="btn btn-ghost btn-block" type="submit" style="color:var(--danger)">Clear key</button>
+                </form>
+            }
+
+            <div class="disclaimer mt-4">
+                @if (Model.IsSystem) { <span>This is a seeded system provider and cannot be deleted.</span> }
+                else { <span>Custom provider. It can be deleted from the providers list.</span> }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
